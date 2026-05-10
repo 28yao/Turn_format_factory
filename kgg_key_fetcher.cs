@@ -5,19 +5,22 @@ using System.Text;
 using System.Collections.Generic;
 
 class KggKeyFetcher {
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool SetDllDirectory(string lpPathName);
+
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_open_v2(string filename, out IntPtr ppDb, int flags, IntPtr zVfs);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_key(IntPtr db, byte[] pKey, int nKey);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_exec(IntPtr db, string sql, IntPtr callback, IntPtr arg, out IntPtr errmsg);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr sqlite3_errmsg(IntPtr db);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_close(IntPtr db);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -60,9 +63,9 @@ class KggKeyFetcher {
     }
 
     public static void Main(string[] args) {
-        // Usage: KggKeyFetcher.exe <originalHash> [dbPath]
+        // Usage: KggKeyFetcher.exe <originalHash> [infraDir]
         if (args.Length < 1) {
-            Console.Error.WriteLine("Usage: KggKeyFetcher.exe <originalHash>");
+            Console.Error.WriteLine("Usage: KggKeyFetcher.exe <originalHash> [infraDir]");
             return;
         }
 
@@ -70,6 +73,16 @@ class KggKeyFetcher {
         if (originalHash.Length != 32) {
             Console.Error.WriteLine("Error: originalHash must be 32 hex chars, got: " + originalHash.Length);
             return;
+        }
+
+        // 设置 infra.dll 的搜索目录
+        if (args.Length >= 2 && !string.IsNullOrEmpty(args[1])) {
+            string infraDir = args[1];
+            if (Directory.Exists(infraDir)) {
+                SetDllDirectory(infraDir);
+            } else {
+                Console.Error.WriteLine("Warning: infra directory not found: " + infraDir);
+            }
         }
 
         string dbPath = Path.Combine(

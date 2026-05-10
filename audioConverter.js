@@ -189,6 +189,14 @@ async function convertAudio(inputPath, targetFormat, options = {}) {
                 try {
                     outInfo = await getAudioInfo(outputPath);
                 } catch { }
+
+                // 清理解密产生的中间文件（仅当与最终输出不同路径时）
+                if (tempDecryptDir && tempDecryptDir !== outputPath) {
+                    try {
+                        await fsp.unlink(tempDecryptDir);
+                    } catch { /* 忽略清理失败 */ }
+                }
+
                 resolve({
                     outputPath,
                     outputName: path.basename(outputPath),

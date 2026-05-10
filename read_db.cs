@@ -4,19 +4,22 @@ using System.IO;
 using System.Text;
 
 class InfraDB {
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool SetDllDirectory(string lpPathName);
+
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_open_v2(string filename, out IntPtr ppDb, int flags, IntPtr zVfs);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_key(IntPtr db, byte[] pKey, int nKey);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_exec(IntPtr db, string sql, IntPtr callback, IntPtr arg, out IntPtr errmsg);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr sqlite3_errmsg(IntPtr db);
 
-    [DllImport("D:\\B_Station\\KuGou\\KGMusic\\20.0.10.26944\\infra.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("infra.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern int sqlite3_close(IntPtr db);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -49,7 +52,17 @@ class InfraDB {
         return 0;
     }
 
-    public static void Main() {
+    public static void Main(string[] args) {
+        // 设置 infra.dll 的搜索目录
+        if (args.Length >= 1 && !string.IsNullOrEmpty(args[0])) {
+            string infraDir = args[0];
+            if (Directory.Exists(infraDir)) {
+                SetDllDirectory(infraDir);
+            } else {
+                Console.Error.WriteLine("Error: infra directory not found: " + infraDir);
+                return;
+            }
+        }
         string dbPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Kugou8", "KGMusicV3.db"

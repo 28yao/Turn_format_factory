@@ -386,9 +386,44 @@ class QMC2_RC4 {
 // ==================== 数据库查询 ====================
 
 /**
+ * 自动检测 KuGou 安装目录中的 infra.dll
+ * 返回包含 infra.dll 的目录路径，未找到返回 null
+ */
+function findInfraDllDir() {
+    const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+    const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
+
+    const rootPaths = [
+        'D:\\B_Station\\KuGou\\KGMusic',
+        path.join(programFilesX86, 'KuGou\\KGMusic'),
+        path.join(programFiles, 'KuGou\\KGMusic'),
+        'C:\\Program Files (x86)\\KuGou\\KGMusic',
+        'C:\\Program Files\\KuGou\\KGMusic',
+    ];
+
+    for (const root of rootPaths) {
+        if (!fs.existsSync(root)) continue;
+        try {
+            const entries = fs.readdirSync(root);
+            // 按名称降序排序，优先取最新版本
+            entries.sort().reverse();
+            for (const entry of entries) {
+                const infraPath = path.join(root, entry, 'infra.dll');
+                if (fs.existsSync(infraPath)) {
+                    return path.join(root, entry);
+                }
+            }
+        } catch (e) {
+            // 忽略权限错误
+        }
+    }
+    return null;
+}
+
+/**
  * 通过 C# 辅助程序查询 KGMusicV3.db
  */
-function fetchEKeyFromDB(encryptionKeyId) {
+function fetchEKeyFromDB(encryptionKeyId, infraDir) {
     return new Promise((resolve, reject) => {
         const helperExe = path.join(__dirname, 'kgg_key_fetcher.exe');
 
@@ -397,7 +432,8 @@ function fetchEKeyFromDB(encryptionKeyId) {
             return;
         }
 
-        execFile(helperExe, [encryptionKeyId], { timeout: 15000 }, (err, stdout, stderr) => {
+        const args = infraDir ? [encryptionKeyId, infraDir] : [encryptionKeyId];
+        execFile(helperExe, args, { timeout: 15000 }, (err, stdout, stderr) => {
             if (err) {
                 reject(new Error(`数据库查询失败: ${err.message}`));
                 return;
@@ -422,9 +458,11 @@ function detectAudioFormat(audioData) {
 }
 
 function isKggSupported() {
-    const appDataDir = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
     const helperExe = path.join(__dirname, 'kgg_key_fetcher.exe');
-    return fs.existsSync(helperExe);
+    if (!fs.existsSync(helperExe)) return false;
+    // 检查是否能找到 infra.dll
+    const infraDir = findInfraDllDir();
+    return infraDir !== null;
 }
 
 // ==================== 主入口 ====================
@@ -466,7 +504,12 @@ async function decryptKgg(inputPath, outputDir) {
     }
 
     // 3. 通过 C# 助手查询数据库获取 EncryptionKey
-    const dbResult = await fetchEKeyFromDB(encryptionKeyId);
+    // 自动检测 KuGou 安装目录
+    const infraDir = findInfraDllDir();
+    if (!infraDir) {
+        throw new Error('未找到 KuGou 安装目录中的 infra.dll，请确认已安装酷狗音乐');
+    }
+    const dbResult = await fetchEKeyFromDB(encryptionKeyId, infraDir);
     if (!dbResult.found) {
         throw new Error(`未在数据库中查到密钥 (EncryptionKeyId: ${encryptionKeyId})\n请确保已在酷狗音乐中播放过此文件。`);
     }
@@ -513,4 +556,4 @@ async function decryptKgg(inputPath, outputDir) {
     return outputPath;
 }
 
-module.exports = { decryptKgg, isKggSupported };
+module.exports = { decryptKgg, isKggSupported, findInfraDllDir };
