@@ -135,6 +135,22 @@ async function convertAudio(inputPath, targetFormat, options = {}) {
         const decryptDir = outputDir || path.dirname(inputPath);
         // 先解密到输出目录
         effectiveInputPath = await decryptAudio(inputPath, decryptDir);
+
+        // 如果解密后的文件格式已经等于目标格式，直接返回解密结果，无需再次转换
+        const decryptedExt = path.extname(effectiveInputPath).toLowerCase();
+        if (decryptedExt === targetExt) {
+            const outStat = await fsp.stat(effectiveInputPath);
+            const originalStat = fs.statSync(inputPath);
+            return {
+                outputPath: effectiveInputPath,
+                outputName: path.basename(effectiveInputPath),
+                outputSize: outStat.size,
+                duration: 0,
+                originalSize: originalStat.size,
+                originalName: path.basename(inputPath)
+            };
+        }
+
         // 如果解密后的文件路径跟 inputPath 不同，且输出目录就是解密目录，记录以便清理
         if (effectiveInputPath !== inputPath) {
             tempDecryptDir = effectiveInputPath;
