@@ -1,6 +1,8 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+    // 获取拖拽文件的系统路径（Electron 专用 API）
+    getPathForFile: (file) => webUtils.getPathForFile(file),
     // ===== 图片相关 =====
     // 选择图片文件（单张）
     selectFiles: () => ipcRenderer.invoke('select-files'),
@@ -43,5 +45,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 移除音频进度监听
     removeAudioBatchProgress: () => {
         ipcRenderer.removeAllListeners('audio-batch-progress');
-    }
+    },
+
+    // ===== 视频相关 =====
+    // 选择视频文件（单张）
+    selectVideoFiles: () => ipcRenderer.invoke('select-video-files'),
+    // 选择视频文件夹（批量）
+    selectVideoFolder: () => ipcRenderer.invoke('select-video-folder'),
+    // 获取视频格式列表
+    getVideoFormats: () => ipcRenderer.invoke('get-video-formats'),
+    // 获取视频格式详情（含编码器信息）
+    getVideoFormatDetails: () => ipcRenderer.invoke('get-video-format-details'),
+    // 获取单个视频文件信息
+    getVideoInfo: (filePath) => ipcRenderer.invoke('get-video-info-single', filePath),
+    // 获取单个图片文件信息
+    getImageInfo: (filePath) => ipcRenderer.invoke('get-image-info-single', filePath),
+    // 单张视频转换
+    convertVideoSingle: (options) => ipcRenderer.invoke('convert-video-single', options),
+    // 批量视频转换
+    convertVideoBatch: (options) => ipcRenderer.invoke('convert-video-batch', options),
+    // 视频批量进度监听
+    onVideoBatchProgress: (callback) => {
+        ipcRenderer.on('video-batch-progress', (event, data) => callback(data));
+    },
+    // 移除视频进度监听
+    removeVideoBatchProgress: () => {
+        ipcRenderer.removeAllListeners('video-batch-progress');
+    },
+    // ===== 通用 =====
+    // 保存文件到临时目录（用于 file.path 不可用的拖拽文件）
+    saveTempFile: (data) => ipcRenderer.invoke('save-temp-file', data)
 });

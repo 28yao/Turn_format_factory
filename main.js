@@ -1,8 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { convertImage, getImageInfo } = require('./converter');
 const { convertAudio, getAudioInfo: getAudioInfoFn, AUDIO_FORMATS: AUDIO_FORMATS_LIST } = require('./audioConverter');
+const { convertVideo, getVideoInfo: getVideoInfoFn, VIDEO_FORMATS: VIDEO_FORMATS_LIST } = require('./videoConverter');
 
 let mainWindow = null;
 
@@ -56,6 +58,18 @@ const IMAGE_FORMATS = [
     { label: 'TIFF (.tiff)', ext: '.tiff', mime: 'image/tiff' },
     { label: 'ICO (.ico)', ext: '.ico', mime: 'image/x-icon' },
     { label: 'AVIF (.avif)', ext: '.avif', mime: 'image/avif' }
+];
+
+const VIDEO_FILE_FILTERS = [
+    { name: '所有视频格式', extensions: ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'gif'] },
+    { name: 'MP4', extensions: ['mp4'] },
+    { name: 'AVI', extensions: ['avi'] },
+    { name: 'MKV', extensions: ['mkv'] },
+    { name: 'MOV', extensions: ['mov'] },
+    { name: 'WMV', extensions: ['wmv'] },
+    { name: 'FLV', extensions: ['flv'] },
+    { name: 'WebM', extensions: ['webm'] },
+    { name: 'GIF', extensions: ['gif'] }
 ];
 
 const AUDIO_FILE_FILTERS = [
@@ -175,6 +189,152 @@ ipcMain.handle('get-audio-formats', () => {
 // 获取音频格式详情（含编码器/码率信息）
 ipcMain.handle('get-audio-format-details', () => {
     return { formats: AUDIO_FORMATS_LIST };
+});
+
+// === 视频相关 ===
+
+// 获取视频格式列表
+ipcMain.handle('get-video-formats', () => {
+    return { formats: VIDEO_FORMATS_LIST };
+});
+
+// 选择视频文件（单张模式）
+ipcMain.handle('select-video-files', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: '选择视频文件',
+        properties: ['openFile', 'multiSelections'],
+        filters: VIDEO_FILE_FILTERS
+    });
+    if (result.canceled) return { files: [] };
+
+    const filesInfo = [];
+    for (const filePath of result.filePaths) {
+        try {
+            const info = await getVideoInfoFn(filePath);
+            filesInfo.push(info);
+        } catch {
+            const stat = fs.statSync(filePath);
+            filesInfo.push({
+                path: filePath,
+                name: path.basename(filePath),
+                ext: path.extname(filePath).toLowerCase(),
+                size: stat.size
+            });
+        }
+    }
+    return { files: filesInfo };
+});
+
+// 选择视频文件夹（批量模式）
+ipcMain.handle('select-video-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: '选择包含视频文件的文件夹',
+        properties: ['openDirectory']
+    });
+    if (result.canceled) return { files: [] };
+
+    const dir = result.filePaths[0];
+    const validExts = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.gif'];
+    const files = [];
+
+    const dirEntries = fs.readdirSync(dir);
+    for (const entry of dirEntries) {
+        const ext = path.extname(entry).toLowerCase();
+        if (validExts.includes(ext)) {
+            const fullPath = path.join(dir, entry);
+            try {
+                const info = await getVideoInfoFn(fullPath);
+                files.push(info);
+            } catch {
+                const stat = fs.statSync(fullPath);
+                files.push({
+                    path: fullPath,
+                    name: entry,
+                    ext: ext,
+                    size: stat.size
+                });
+            }
+        }
+    }
+
+    return { files, folderPath: dir };
+});
+
+// 获取视频格式详情（含编码器信息）
+ipcMain.handle('get-video-format-details', () => {
+    return { formats: VIDEO_FORMATS_LIST };
+});
+
+// 获取单个视频文件详细信息
+ipcMain.handle('get-video-info-single', async (event, filePath) => {
+    try {
+        const info = await getVideoInfoFn(filePath);
+        return { success: true, info };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+// 获取单个图片文件信息
+ipcMain.handle('get-image-info-single', async (event, filePath) => {
+    try {
+        const info = await getImageInfo(filePath);
+        return { success: true, info };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+// === 视频转换 ===
+
+// 单张视频转换
+ipcMain.handle('convert-video-single', async (event, options) => {
+    const { inputPath, targetFormat, quality, resize, keepAspectRatio, outputDir, scalePercent } = options;
+    try {
+        const result = await convertVideo(inputPath, targetFormat, {
+            quality,
+            resize,
+            keepAspectRatio,
+            scalePercent,
+            outputDir
+        });
+        return { success: true, ...result };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+// 批量视频转换
+ipcMain.handle('convert-video-batch', async (event, options) => {
+    const { files, targetFormat, quality, resize, keepAspectRatio, outputDir, scalePercent } = options;
+    const results = [];
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+            const result = await convertVideo(file.path, targetFormat, {
+                quality,
+                resize,
+                keepAspectRatio,
+                scalePercent,
+                outputDir
+            });
+            results.push({ success: true, file: file.name, ...result, index: i, total: files.length });
+        } catch (err) {
+            results.push({ success: false, file: file.name, error: err.message, index: i, total: files.length });
+        }
+
+        // 发送进度
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('video-batch-progress', {
+                current: i + 1,
+                total: files.length,
+                lastResult: results[results.length - 1]
+            });
+        }
+    }
+
+    return results;
 });
 
 // === 音频文件选择 ===
@@ -335,4 +495,19 @@ ipcMain.handle('convert-batch', async (event, options) => {
     }
 
     return results;
+});
+
+// === 通用 ===
+
+// 保存拖拽文件到临时目录（当 file.path 不可用时）
+ipcMain.handle('save-temp-file', async (event, { name, buffer }) => {
+    try {
+        const tmpDir = os.tmpdir();
+        const safeName = Date.now() + '_' + name.replace(/[^\w.-]/g, '_');
+        const dest = path.join(tmpDir, safeName);
+        fs.writeFileSync(dest, Buffer.from(buffer));
+        return { success: true, path: dest };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 });
