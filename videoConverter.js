@@ -121,8 +121,47 @@ function findFormat(targetExt) {
 
 /**
  * 视频转 GIF（两遍 palette 优化）
+ * @param {string} inputPath
+ * @param {string} outputPath
+ * @param {object} [options]
+ * @param {number} [options.quality] - 质量 0-100，默认 80，控制帧率/调色板/抖动
+ * @param {number} [options.scalePercent] - 缩放百分比 10-100，默认 null(原始)
  */
-async function convertToGif(inputPath, outputPath) {
+async function convertToGif(inputPath, outputPath, options = {}) {
+    const { quality = 40, scalePercent = null } = options;
+
+    // 质量映射
+    // fps: 0→4fps, 40→14fps, 80→24fps, 100→30fps
+    const fps = 4 + Math.round((quality / 100) * 26);
+    // palettegen stats_mode: quality<30 用 single(静态), ≥30 用 diff(动态)
+    const statsMode = quality < 30 ? 'single' : 'diff';
+    // dither: quality<10→none, 10-29→bayer:scale=2, 30-49→bayer:scale=3, 50-69→bayer:scale=4, 70-89→bayer:scale=5, ≥90→floyd_steinberg
+    let dither;
+    if (quality < 10) {
+        dither = 'none';
+    } else if (quality < 30) {
+        dither = 'bayer:bayer_scale=2';
+    } else if (quality < 50) {
+        dither = 'bayer:bayer_scale=3';
+    } else if (quality < 70) {
+        dither = 'bayer:bayer_scale=4';
+    } else if (quality < 90) {
+        dither = 'bayer:bayer_scale=5';
+    } else {
+        dither = 'floyd_steinberg';
+    }
+
+    // 缩放百分比（GIF 最高 100%，默认降半缩小体积）
+    const cappedPercent = scalePercent ? Math.min(scalePercent, 100) : 50;
+    let scaleFilter;
+    if (cappedPercent >= 100) {
+        // 100%: 保持原始尺寸
+        scaleFilter = 'scale=iw:ih:flags=lanczos';
+    } else {
+        // <100%: 按比例缩小，trunc+偶数以保证 palettegen 兼容
+        scaleFilter = `scale='trunc(${cappedPercent}*iw/100/2)*2':'trunc(${cappedPercent}*ih/100/2)*2':flags=lanczos`;
+    }
+
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fmt-gif-'));
     const palettePath = path.join(tmpDir, 'palette.png');
 
@@ -131,7 +170,7 @@ async function convertToGif(inputPath, outputPath) {
         await new Promise((resolve, reject) => {
             const args = [
                 '-i', inputPath,
-                '-vf', "fps=15,scale='min(600,iw)':'min(600,ih)':flags=lanczos,palettegen=stats_mode=diff",
+                '-vf', `fps=${fps},${scaleFilter},palettegen=stats_mode=${statsMode}`,
                 '-y', palettePath
             ];
             const proc = spawn(ffmpegPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -148,7 +187,7 @@ async function convertToGif(inputPath, outputPath) {
             const args = [
                 '-i', inputPath,
                 '-i', palettePath,
-                '-filter_complex', "[0:v]fps=15,scale='min(600,iw)':'min(600,ih)':flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5",
+                '-filter_complex', `[0:v]fps=${fps},${scaleFilter}[x];[x][1:v]paletteuse=dither=${dither}`,
                 '-y', outputPath
             ];
             const proc = spawn(ffmpegPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -202,7 +241,7 @@ async function convertVideo(inputPath, targetFormat, options = {}) {
 
     // GIF 特殊处理：两遍 palette
     if (targetExt === '.gif') {
-        await convertToGif(inputPath, outputPath);
+        await convertToGif(inputPath, outputPath, { quality, scalePercent });
 
         const outStat = await fsp.stat(outputPath);
         return {
