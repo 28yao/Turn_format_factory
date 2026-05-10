@@ -12,9 +12,9 @@ const appState = {
 const LOSSY_FORMATS = ['.jpg', '.jpeg', '.webp', '.avif'];
 const IMAGE_FORMATS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff', '.tif', '.ico', '.avif'];
 
-const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.ncm'];
+const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.kgg', '.ncm'];
 const AUDIO_LOSSY_FORMATS = ['.mp3', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
-const ENCRYPTED_AUDIO_EXTS = ['.kgm', '.kgma', '.ncm'];
+const ENCRYPTED_AUDIO_EXTS = ['.kgm', '.kgma', '.kgg', '.ncm'];
 
 // 音频格式码率范围映射
 const AUDIO_BITRATE_MAP = {
@@ -53,7 +53,7 @@ const HOME_CARDS = [
         icon: '🎵',
         iconClass: 'audio',
         title: '音频转换',
-        formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A / Opus\n+KGM / NCM 加密解密',
+        formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A / Opus\n+KGM / KGG / NCM 加密解密',
         status: 'ready',
         statusText: '可用',
         actionText: '进入转换'
@@ -461,7 +461,7 @@ function renderFileInfo() {
             const ext = file.ext ? file.ext.toLowerCase() : '';
             const isEncrypted = ENCRYPTED_AUDIO_EXTS.includes(ext);
             const formatBadge = isEncrypted ?
-                `<span class="audio-format-badge encrypted">${ext === '.ncm' ? 'NCM' : 'KGM'} 加密</span>` :
+                `<span class="audio-format-badge encrypted">${ext === '.ncm' ? 'NCM' : ext === '.kgg' ? 'KGG' : 'KGM'} 加密</span>` :
                 `<span class="audio-format-badge">${ext.slice(1).toUpperCase()}</span>`;
             fileInfo.innerHTML = `
                 <div class="file-details">

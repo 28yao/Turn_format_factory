@@ -23,8 +23,8 @@ const AUDIO_FORMATS = [
 ];
 
 const LOSSY_AUDIO_FORMATS = ['.mp3', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
-const ALL_AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.ncm'];
-const ENCRYPTED_AUDIO_EXTS = ['.kgm', '.kgma', '.ncm'];
+const ALL_AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.kgg', '.ncm'];
+const ENCRYPTED_AUDIO_EXTS = ['.kgm', '.kgma', '.kgg', '.ncm'];
 
 /**
  * 获取音频文件信息（通过 ffprobe）
@@ -43,7 +43,7 @@ async function getAudioInfo(filePath) {
             size: stat.size,
             format: ext.slice(1).toUpperCase(),
             encrypted: true,
-            encryptedType: ext === '.ncm' ? 'NCM (网易云加密)' : 'KGM (酷狗加密)'
+            encryptedType: ext === '.ncm' ? 'NCM (网易云加密)' : ext === '.kgg' ? 'KGG (酷狗加密)' : 'KGM (酷狗加密)'
         };
     }
 

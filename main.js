@@ -59,7 +59,7 @@ const IMAGE_FORMATS = [
 ];
 
 const AUDIO_FILE_FILTERS = [
-    { name: '所有音频格式', extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'opus', 'wma', 'kgm', 'kgma', 'ncm'] },
+    { name: '所有音频格式', extensions: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'opus', 'wma', 'kgm', 'kgma', 'kgg', 'ncm'] },
     { name: 'MP3', extensions: ['mp3'] },
     { name: 'WAV', extensions: ['wav'] },
     { name: 'FLAC', extensions: ['flac'] },
@@ -68,7 +68,7 @@ const AUDIO_FILE_FILTERS = [
     { name: 'M4A', extensions: ['m4a'] },
     { name: 'Opus', extensions: ['opus'] },
     { name: 'WMA', extensions: ['wma'] },
-    { name: 'KGM (酷狗加密)', extensions: ['kgm', 'kgma'] },
+    { name: 'KGM (酷狗加密)', extensions: ['kgm', 'kgma', 'kgg'] },
     { name: 'NCM (网易云加密)', extensions: ['ncm'] }
 ];
 
@@ -216,7 +216,7 @@ ipcMain.handle('select-audio-folder', async () => {
     if (result.canceled) return { files: [] };
 
     const dir = result.filePaths[0];
-    const validExts = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.ncm'];
+    const validExts = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.kgg', '.ncm'];
     const files = [];
 
     const dirEntries = fs.readdirSync(dir);

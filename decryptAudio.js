@@ -4,12 +4,15 @@ const os = require('os');
 
 const DECRYPTION_BUF_SIZE = 2 * 1024 * 1024;
 
+const { decryptKgg } = require('./decryptKgg');
+
 /**
  * 检测文件是否为加密格式
  */
 function isEncryptedFile(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     if (ext === '.kgm' || ext === '.kgma') return { encrypted: true, type: 'kgm' };
+    if (ext === '.kgg') return { encrypted: true, type: 'kgg' };
     if (ext === '.ncm') return { encrypted: true, type: 'ncm' };
     return { encrypted: false };
 }
@@ -172,6 +175,8 @@ async function decryptAudio(inputPath, outputDir) {
 
     if (check.type === 'kgm') {
         return await decryptKgm(inputPath, outputDir);
+    } else if (check.type === 'kgg') {
+        return await decryptKgg(inputPath, outputDir);
     } else if (check.type === 'ncm') {
         return await decryptNcm(inputPath, outputDir);
     }
