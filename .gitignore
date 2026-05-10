@@ -1,0 +1,7 @@
+node_modules/
+release/
+dist/
+*.exe
+*.msi
+*.webp
+test_*

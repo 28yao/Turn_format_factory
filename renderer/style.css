@@ -1,0 +1,492 @@
+/* === 全局样式 === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    min-height: 100vh;
+}
+
+#app {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* === 标题栏 === */
+header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a73e8;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+}
+
+/* === 通用区域 === */
+.section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* === 模式切换 === */
+.mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    background: #e8eaed;
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.mode-tab {
+    flex: 1;
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-tab:hover {
+    color: #1a73e8;
+}
+
+.mode-tab.active {
+    background: #fff;
+    color: #1a73e8;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+/* === 拖拽区域 === */
+.dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #fafbfc;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+    border-color: #1a73e8;
+    background: #e8f0fe;
+}
+
+.dropzone-icon {
+    font-size: 40px;
+    color: #1a73e8;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.dropzone-text {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 16px;
+}
+
+/* === 按钮 === */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: #1a73e8;
+    color: #fff;
+    padding: 10px 24px;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #1557b0;
+}
+
+.btn-small {
+    background: #e8eaed;
+    color: #555;
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+.btn-small:hover:not(:disabled) {
+    background: #d2d4d7;
+}
+
+.btn-convert {
+    width: 100%;
+    padding: 14px;
+    background: #34a853;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.btn-convert:hover:not(:disabled) {
+    background: #2d9249;
+}
+
+/* === 文件信息 === */
+.file-info {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e8eaed;
+}
+
+.file-thumb {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 4px;
+    margin-right: 16px;
+    object-fit: cover;
+}
+
+.file-details {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.file-meta {
+    flex: 1;
+}
+
+.file-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+    word-break: break-all;
+}
+
+.file-size {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.file-dimensions {
+    font-size: 13px;
+    color: #888;
+    margin-top: 2px;
+}
+
+.file-error {
+    color: #d93025;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+/* === 批量模式文件列表 === */
+.file-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-list-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+}
+
+.file-list-item:last-child {
+    border-bottom: none;
+}
+
+.file-list-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    margin-right: 12px;
+    object-fit: cover;
+    background: #f0f0f0;
+}
+
+.file-list-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-list-size {
+    color: #888;
+    margin-left: 12px;
+    white-space: nowrap;
+}
+
+/* === 设置区 === */
+.settings-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.setting-item label {
+    min-width: 80px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    flex-shrink: 0;
+}
+
+/* 目标格式下拉 */
+#target-format {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+    max-width: 300px;
+}
+
+#target-format:focus {
+    outline: none;
+    border-color: #1a73e8;
+}
+
+/* 质量滑块 */
+.quality-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    max-width: 300px;
+}
+
+#quality-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+}
+
+#quality-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1a73e8;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+#quality-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a73e8;
+    min-width: 40px;
+    text-align: right;
+}
+
+/* 尺寸缩放 */
+.resize-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.resize-input {
+    width: 80px;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.resize-input:focus {
+    outline: none;
+    border-color: #1a73e8;
+}
+
+.resize-sep {
+    color: #888;
+    font-size: 16px;
+}
+
+/* 复选框 */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #1a73e8;
+}
+
+/* 输出目录 */
+.output-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.output-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #888;
+    background: #f8f9fa;
+}
+
+/* === 操作按钮区 === */
+.action-section {
+    margin-bottom: 16px;
+}
+
+/* === 进度条 === */
+.progress-bar {
+    height: 24px;
+    background: #e8eaed;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #34a853, #1a73e8);
+    border-radius: 12px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* === 日志区域 === */
+.log-container {
+    max-height: 250px;
+    overflow-y: auto;
+    font-size: 13px;
+}
+
+.log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+.log-entry.success {
+    background: #e6f4ea;
+    color: #1e7e34;
+}
+
+.log-entry.error {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+.log-entry.info {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.log-time {
+    color: #999;
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 70px;
+}
+
+.log-msg {
+    flex: 1;
+    line-height: 1.4;
+}
+
+/* === 滚动条美化 === */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}

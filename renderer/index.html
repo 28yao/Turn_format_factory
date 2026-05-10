@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:;">
+    <title>格式工厂</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 标题栏 -->
+        <header>
+            <h1>格式工厂</h1>
+            <p class="subtitle">图片格式转换工具</p>
+        </header>
+
+        <!-- 模式切换 -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="single">单张转换</button>
+            <button class="mode-tab" data-mode="batch">批量转换</button>
+        </div>
+
+        <!-- 文件选择区域 -->
+        <div id="file-section" class="section">
+            <div id="dropzone" class="dropzone">
+                <div class="dropzone-icon">+</div>
+                <div class="dropzone-text">
+                    <span id="dropzone-label">点击选择文件或拖拽图片到此处</span>
+                </div>
+                <button id="select-btn" class="btn btn-primary">选择文件</button>
+                <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+            </div>
+            <div id="file-info" class="file-info" style="display:none"></div>
+        </div>
+
+        <!-- 转换设置 -->
+        <div class="section settings-section">
+            <h2 class="section-title">转换设置</h2>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="target-format">目标格式</label>
+                    <select id="target-format">
+                        <option value=".jpg">JPEG (.jpg)</option>
+                        <option value=".png" selected>PNG (.png)</option>
+                        <option value=".webp">WebP (.webp)</option>
+                        <option value=".bmp">BMP (.bmp)</option>
+                        <option value=".gif">GIF (.gif)</option>
+                        <option value=".tiff">TIFF (.tiff)</option>
+                        <option value=".ico">ICO (.ico)</option>
+                        <option value=".avif">AVIF (.avif)</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="quality-slider">质量</label>
+                    <div class="quality-control">
+                        <input type="range" id="quality-slider" min="1" max="100" value="80">
+                        <span id="quality-value">80%</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>尺寸缩放</label>
+                    <div class="resize-control">
+                        <input type="number" id="resize-width" class="resize-input" placeholder="宽度" min="1">
+                        <span class="resize-sep">×</span>
+                        <input type="number" id="resize-height" class="resize-input" placeholder="高度" min="1">
+                        <button id="resize-original-btn" class="btn btn-small">原始</button>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="keep-aspect-ratio" checked>
+                        保持宽高比
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label>输出目录</label>
+                    <div class="output-control">
+                        <input type="text" id="output-dir" class="output-input" placeholder="与原文件相同目录（默认）" readonly>
+                        <button id="select-output-btn" class="btn btn-small">选择目录</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="action-section">
+            <button id="convert-btn" class="btn btn-convert" disabled>开始转换</button>
+        </div>
+
+        <!-- 进度与日志 -->
+        <div id="log-section" class="section log-section" style="display:none">
+            <div id="progress-bar" class="progress-bar" style="display:none">
+                <div class="progress-fill" id="progress-fill"></div>
+                <span class="progress-text" id="progress-text">0/0</span>
+            </div>
+            <div id="log-container" class="log-container"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

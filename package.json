@@ -1,0 +1,38 @@
+{
+  "name": "format-factory",
+  "version": "1.0.0",
+  "description": "格式工厂 - 图片格式转换工具",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.formatfactory.app",
+    "productName": "格式工厂",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
+  "keywords": [
+    "格式转换",
+    "图片处理",
+    "Electron"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^42.0.1",
+    "electron-builder": "^26.8.1",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
+  }
+}
