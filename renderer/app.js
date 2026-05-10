@@ -371,11 +371,17 @@ dropzone.addEventListener('drop', async (e) => {
 
     const paths = [];
     const skippedFiles = [];
+    const invalidPaths = [];
 
     for (const file of files) {
-        // 优先使用 file.path（Electron 完整路径），否则用 file.name 兜底
-        const sourcePath = file.path || file.name;
-        const ext = getExtFromPath(sourcePath);
+        // Electron 拖拽文件时 file.path 应包含完整绝对路径
+        const filePath = file.path;
+        if (!filePath) {
+            skippedFiles.push(`${file.name} (无法获取路径)`);
+            continue;
+        }
+
+        const ext = getExtFromPath(filePath);
 
         if (!ext) {
             skippedFiles.push(file.name);
@@ -393,7 +399,7 @@ dropzone.addEventListener('drop', async (e) => {
         }
 
         paths.push({
-            path: file.path || sourcePath,
+            path: filePath,
             name: file.name,
             ext: ext
         });
@@ -401,7 +407,10 @@ dropzone.addEventListener('drop', async (e) => {
 
     if (paths.length === 0) {
         const typeLabel = appState.convertType === 'audio' ? '音频' : '图片';
-        const detail = skippedFiles.length > 0 ? `（不支持: ${skippedFiles.slice(0, 3).join(', ')}${skippedFiles.length > 3 ? '...' : ''}）` : '';
+        let detail = '';
+        if (skippedFiles.length > 0) {
+            detail = `（不支持: ${skippedFiles.slice(0, 3).join(', ')}${skippedFiles.length > 3 ? '...' : ''}）`;
+        }
         addLog('error', `请拖拽支持的${typeLabel}格式文件${detail}`);
         return;
     }

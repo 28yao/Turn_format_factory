@@ -38,6 +38,11 @@ async function decryptKgm(inputPath, outputDir) {
     const KgmCryptoModule = require('@xhacker/kgmwasm');
     const KgmCryptoObj = await KgmCryptoModule();
 
+    // 检查文件是否存在
+    if (!fs.existsSync(inputPath)) {
+        throw new Error(`KGM 文件不存在: ${inputPath}`);
+    }
+
     const kgmBuf = new Uint8Array(fs.readFileSync(inputPath));
     const ext = path.extname(inputPath).toLowerCase(); // .kgm or .kgma
 
