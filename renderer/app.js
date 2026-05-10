@@ -413,6 +413,43 @@ dropzone.addEventListener('drop', async (e) => {
     renderFileInfo();
 });
 
+// 移除单个文件
+function removeFile(index) {
+    appState.files.splice(index, 1);
+    if (appState.files.length === 0) {
+        appState.isSingleFile = true;
+        fileInfo.style.display = 'none';
+        convertBtn.disabled = true;
+    } else {
+        renderFileInfo();
+    }
+}
+
+// 移除全部文件
+function removeAllFiles() {
+    appState.files = [];
+    appState.isSingleFile = true;
+    fileInfo.style.display = 'none';
+    convertBtn.disabled = true;
+}
+
+// === 文件列表事件委托（移除按钮） ===
+fileInfo.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('.file-remove-btn');
+    if (removeBtn) {
+        const index = parseInt(removeBtn.dataset.index);
+        if (!isNaN(index)) {
+            removeFile(index);
+        }
+        return;
+    }
+
+    const removeAllBtn = e.target.closest('.remove-all-btn');
+    if (removeAllBtn) {
+        removeAllFiles();
+    }
+});
+
 // === 渲染文件信息 ===
 function renderFileInfo() {
     fileInfo.style.display = 'block';
@@ -449,11 +486,12 @@ function renderFileInfo() {
                         <span class="file-list-audio-icon">🎵</span>
                         <span class="file-list-name">${file.name}</span>
                         <span class="file-list-size">${file.size ? formatFileSize(file.size) : ''}</span>
+                        <button class="file-remove-btn" data-index="${appState.files.indexOf(file)}" title="移除">✕</button>
                     </div>
                 `;
             });
             html += `</div>`;
-            html += `<div style="margin-top:8px;font-size:13px;color:#888;">共 ${appState.files.length} 个文件</div>`;
+            html += `<div class="file-list-footer"><span style="font-size:13px;color:#888;">共 ${appState.files.length} 个文件</span><button class="remove-all-btn">全部移除</button></div>`;
             fileInfo.innerHTML = html;
         }
     } else {
@@ -486,11 +524,12 @@ function renderFileInfo() {
                         <img class="file-list-icon" src="${iconPath}" onerror="this.style.display='none'">
                         <span class="file-list-name">${file.name}</span>
                         <span class="file-list-size">${file.size ? formatFileSize(file.size) : ''}</span>
+                        <button class="file-remove-btn" data-index="${appState.files.indexOf(file)}" title="移除">✕</button>
                     </div>
                 `;
             });
             html += `</div>`;
-            html += `<div style="margin-top:8px;font-size:13px;color:#888;">共 ${appState.files.length} 个文件</div>`;
+            html += `<div class="file-list-footer"><span style="font-size:13px;color:#888;">共 ${appState.files.length} 个文件</span><button class="remove-all-btn">全部移除</button></div>`;
             fileInfo.innerHTML = html;
 
             resizeWidth.value = '';
