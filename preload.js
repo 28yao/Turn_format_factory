@@ -74,5 +74,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     // ===== 通用 =====
     // 保存文件到临时目录（用于 file.path 不可用的拖拽文件）
-    saveTempFile: (data) => ipcRenderer.invoke('save-temp-file', data)
+    saveTempFile: (data) => ipcRenderer.invoke('save-temp-file', data),
+
+    // ===== 文档/PDF 相关 =====
+    // 获取文档转换格式列表
+    getDocFormats: () => ipcRenderer.invoke('get-doc-formats'),
+    // 检查 LibreOffice 是否可用
+    checkLibreOffice: () => ipcRenderer.invoke('check-libreoffice'),
+    // 选择文件（文件转PDF/PDF转文件/Word转换）
+    selectOfficeFiles: (convertType) => ipcRenderer.invoke('select-office-files', convertType),
+    // 选择文件夹（批量模式）
+    selectOfficeFolder: (convertType) => ipcRenderer.invoke('select-office-folder', convertType),
+    // 单张文档转换
+    convertOfficeSingle: (options) => ipcRenderer.invoke('convert-office-single', options),
+    // 批量文档转换
+    convertOfficeBatch: (options) => ipcRenderer.invoke('convert-office-batch', options),
+    // 文档批量进度监听
+    onOfficeBatchProgress: (callback) => {
+        ipcRenderer.on('office-batch-progress', (event, data) => callback(data));
+    },
+    // 移除文档批量进度监听
+    removeOfficeBatchProgress: () => {
+        ipcRenderer.removeAllListeners('office-batch-progress');
+    }
 });

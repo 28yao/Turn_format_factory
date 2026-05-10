@@ -5,6 +5,7 @@ const os = require('os');
 const { convertImage, getImageInfo } = require('./converter');
 const { convertAudio, getAudioInfo: getAudioInfoFn, AUDIO_FORMATS: AUDIO_FORMATS_LIST } = require('./audioConverter');
 const { convertVideo, getVideoInfo: getVideoInfoFn, VIDEO_FORMATS: VIDEO_FORMATS_LIST } = require('./videoConverter');
+const { convertFile, checkAllEngines, isFileToPdfExt, FILE_TO_PDF_INPUT_EXTS, PDF_TO_FILE_FORMATS, WORD_CONVERT_FORMATS } = require('./docConverter');
 
 let mainWindow = null;
 
@@ -510,4 +511,146 @@ ipcMain.handle('save-temp-file', async (event, { name, buffer }) => {
     } catch (err) {
         return { success: false, error: err.message };
     }
+});
+
+// === 文档/PDF 相关 ===
+
+// 文档/PDF文件过滤
+const DOC_FILE_FILTERS = [
+    { name: '所有文档和图片', extensions: ['docx', 'xlsx', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tiff', 'tif', 'txt'] },
+    { name: 'Word 文档', extensions: ['docx'] },
+    { name: 'Excel 表格', extensions: ['xlsx'] },
+    { name: 'PPT 演示', extensions: ['pptx'] },
+    { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tiff', 'tif'] },
+    { name: '文本文件', extensions: ['txt'] }
+];
+
+const PDF_FILE_FILTERS = [
+    { name: 'PDF 文件', extensions: ['pdf'] }
+];
+
+const WORD_FILE_FILTERS = [
+    { name: 'Word 文档', extensions: ['docx'] }
+];
+
+// 获取文档转换格式列表
+ipcMain.handle('get-doc-formats', () => {
+    return {
+        pdfToFileFormats: PDF_TO_FILE_FORMATS,
+        wordConvertFormats: WORD_CONVERT_FORMATS
+    };
+});
+
+// 检查所有可用转换引擎
+ipcMain.handle('check-libreoffice', async () => {
+    return await checkAllEngines();
+});
+
+// 选择文件（文件转PDF/PDF转文件/Word转换）
+ipcMain.handle('select-office-files', async (event, convertType) => {
+    let filters;
+    let title;
+    if (convertType === 'file-to-pdf') {
+        filters = DOC_FILE_FILTERS;
+        title = '选择要转换为 PDF 的文件';
+    } else if (convertType === 'pdf-to-file') {
+        filters = PDF_FILE_FILTERS;
+        title = '选择 PDF 文件';
+    } else {
+        filters = WORD_FILE_FILTERS;
+        title = '选择 Word 文档';
+    }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title,
+        properties: ['openFile', 'multiSelections'],
+        filters
+    });
+    if (result.canceled) return { files: [] };
+
+    const filesInfo = [];
+    for (const filePath of result.filePaths) {
+        const stat = fs.statSync(filePath);
+        filesInfo.push({
+            path: filePath,
+            name: path.basename(filePath),
+            ext: path.extname(filePath).toLowerCase(),
+            size: stat.size
+        });
+    }
+    return { files: filesInfo };
+});
+
+// 选择文件夹（批量模式）
+ipcMain.handle('select-office-folder', async (event, convertType) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: '选择包含文件的文件夹',
+        properties: ['openDirectory']
+    });
+    if (result.canceled) return { files: [] };
+
+    const dir = result.filePaths[0];
+    let validExts;
+    if (convertType === 'file-to-pdf') {
+        validExts = FILE_TO_PDF_INPUT_EXTS;
+    } else if (convertType === 'pdf-to-file') {
+        validExts = ['.pdf'];
+    } else {
+        validExts = ['.docx'];
+    }
+
+    const files = [];
+    const dirEntries = fs.readdirSync(dir);
+    for (const entry of dirEntries) {
+        const ext = path.extname(entry).toLowerCase();
+        if (validExts.includes(ext)) {
+            const fullPath = path.join(dir, entry);
+            const stat = fs.statSync(fullPath);
+            files.push({
+                path: fullPath,
+                name: entry,
+                ext: ext,
+                size: stat.size
+            });
+        }
+    }
+
+    return { files, folderPath: dir };
+});
+
+// 单张文档转换
+ipcMain.handle('convert-office-single', async (event, options) => {
+    const { inputPath, targetFormat, outputDir } = options;
+    try {
+        const result = await convertFile(inputPath, targetFormat, outputDir);
+        return { success: true, ...result };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+// 批量文档转换
+ipcMain.handle('convert-office-batch', async (event, options) => {
+    const { files, targetFormat, outputDir } = options;
+    const results = [];
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+            const result = await convertFile(file.path, targetFormat, outputDir);
+            results.push({ success: true, file: file.name, ...result, index: i, total: files.length });
+        } catch (err) {
+            results.push({ success: false, file: file.name, error: err.message, index: i, total: files.length });
+        }
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('office-batch-progress', {
+                current: i + 1,
+                total: files.length,
+                lastResult: results[results.length - 1]
+            });
+        }
+    }
+
+    return results;
 });

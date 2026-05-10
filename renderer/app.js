@@ -18,6 +18,10 @@ const ENCRYPTED_AUDIO_EXTS = ['.kgm', '.kgma', '.kgg', '.ncm'];
 
 const VIDEO_EXTS = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.gif'];
 
+// 文档转换扩展名
+const FILE_TO_PDF_EXTS = ['.docx', '.xlsx', '.pptx', '.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff', '.tif', '.txt'];
+const WORD_EXTS = ['.docx'];
+
 // 音频格式码率范围映射
 const AUDIO_BITRATE_MAP = {
     '.mp3': { min: 32, max: 320, step: 32 },
@@ -56,6 +60,26 @@ const HOME_CARDS = [
         iconClass: 'audio',
         title: '音频转换',
         formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A / Opus\n+KGM / KGG / NCM 加密解密',
+        status: 'ready',
+        statusText: '可用',
+        actionText: '进入转换'
+    },
+    {
+        type: 'file-to-pdf',
+        icon: '📄',
+        iconClass: 'doc',
+        title: '文件转PDF',
+        formats: 'Word / Excel / PPT\n图片 / TXT → PDF',
+        status: 'ready',
+        statusText: '可用',
+        actionText: '进入转换'
+    },
+    {
+        type: 'word-convert',
+        icon: '📝',
+        iconClass: 'word',
+        title: 'Word转换',
+        formats: 'Word → PDF\nPPT / HTML',
         status: 'ready',
         statusText: '可用',
         actionText: '进入转换'
@@ -102,6 +126,11 @@ const videoQualityValue = $('video-quality-value');
 const videoScaleSlider = $('video-scale-slider');
 const videoScaleValue = $('video-scale-value');
 
+// 文档设置
+const fileToPdfSettings = $('file-to-pdf-settings');
+const wordConvertSettings = $('word-convert-settings');
+const wordConvertFormat = $('word-convert-format');
+
 // 通用
 
 const outputDirInput = $('output-dir');
@@ -135,6 +164,11 @@ function getExtFromPath(filePath) {
     for (const ext of IMAGE_FORMATS) {
         if (name.endsWith(ext)) return ext;
     }
+    // 再检查文档/PDF扩展名
+    const DOC_EXTS_CHECK = ['.docx', '.xlsx', '.pptx', '.txt', '.pdf'];
+    for (const ext of DOC_EXTS_CHECK) {
+        if (name.endsWith(ext)) return ext;
+    }
     return '';
 }
 
@@ -148,6 +182,14 @@ function isImageExt(ext) {
 
 function isVideoExt(ext) {
     return VIDEO_EXTS.includes(ext);
+}
+
+function isFileToPdfExt(ext) {
+    return FILE_TO_PDF_EXTS.includes(ext);
+}
+
+function isWordExt(ext) {
+    return WORD_EXTS.includes(ext);
 }
 
 function formatDuration(seconds) {
@@ -202,6 +244,19 @@ function updateDropzoneText() {
         } else {
             dropzoneLabel.textContent = '点击选择文件夹或拖拽视频到此处';
         }
+    } else if (appState.convertType === 'file-to-pdf') {
+        if (appState.mode === 'single') {
+            dropzoneLabel.textContent = '点击选择文件或拖拽文档/图片到此处';
+        } else {
+            dropzoneLabel.textContent = '点击选择文件夹或拖拽文档/图片到此处';
+        }
+    }
+    if (appState.convertType === 'word-convert') {
+        if (appState.mode === 'single') {
+            dropzoneLabel.textContent = '点击选择Word文档或拖拽Word文档到此处';
+        } else {
+            dropzoneLabel.textContent = '点击选择文件夹或拖拽Word文档到此处';
+        }
     } else {
         if (appState.mode === 'single') {
             dropzoneLabel.textContent = '点击选择文件或拖拽图片到此处';
@@ -246,13 +301,15 @@ function navigateTo(page, convertType) {
         pageConvert.style.display = 'block';
 
         // 更新标题
-        const typeNames = { image: '图片转换', video: '视频转换', audio: '音频转换' };
+        const typeNames = { image: '图片转换', video: '视频转换', audio: '音频转换', 'file-to-pdf': '文件转PDF', 'word-convert': 'Word转换' };
         pageTitle.textContent = typeNames[convertType] || '转换';
 
         // 切换对应的设置面板
         imageSettings.style.display = 'none';
         audioSettings.style.display = 'none';
         videoSettings.style.display = 'none';
+        fileToPdfSettings.style.display = 'none';
+        wordConvertSettings.style.display = 'none';
         document.querySelector('.mode-tabs').style.display = 'flex';
         document.querySelector('#dropzone').closest('.section').style.display = 'block';
 
@@ -264,6 +321,10 @@ function navigateTo(page, convertType) {
         } else if (convertType === 'video') {
             videoSettings.style.display = 'block';
             renderVideoFormats();
+        } else if (convertType === 'file-to-pdf') {
+            fileToPdfSettings.style.display = 'block';
+        } else if (convertType === 'word-convert') {
+            wordConvertSettings.style.display = 'block';
         }
 
         updateDropzoneText();
@@ -291,10 +352,8 @@ homeCards.addEventListener('click', (e) => {
     const card = e.target.closest('.home-card');
     if (!card) return;
     const type = card.dataset.type;
-    if (type === 'image' || type === 'audio') {
+    if (type === 'image' || type === 'audio' || type === 'video' || type === 'file-to-pdf' || type === 'word-convert') {
         navigateTo('convert', type);
-    } else if (type === 'video') {
-        navigateTo('convert', 'video');
     }
 });
 
@@ -305,7 +364,7 @@ homeCards.addEventListener('click', (e) => {
     e.stopPropagation();
     const card = btn.closest('.home-card');
     const type = card.dataset.type;
-    if (type === 'image' || type === 'audio' || type === 'video') {
+    if (type === 'image' || type === 'audio' || type === 'video' || type === 'file-to-pdf' || type === 'word-convert') {
         navigateTo('convert', type);
     }
 });
@@ -357,6 +416,12 @@ selectBtn.addEventListener('click', async () => {
             result = await window.electronAPI.selectVideoFiles();
         } else {
             result = await window.electronAPI.selectVideoFolder();
+        }
+    } else if (appState.convertType === 'file-to-pdf' || appState.convertType === 'word-convert') {
+        if (appState.mode === 'single') {
+            result = await window.electronAPI.selectOfficeFiles(appState.convertType);
+        } else {
+            result = await window.electronAPI.selectOfficeFolder(appState.convertType);
         }
     } else {
         if (appState.mode === 'single') {
@@ -440,6 +505,14 @@ dropzone.addEventListener('drop', async (e) => {
             skippedFiles.push(file.name);
             continue;
         }
+        if (appState.convertType === 'file-to-pdf' && !isFileToPdfExt(ext)) {
+            skippedFiles.push(file.name);
+            continue;
+        }
+        if (appState.convertType === 'word-convert' && !isWordExt(ext)) {
+            skippedFiles.push(file.name);
+            continue;
+        }
         if ((!appState.convertType || appState.convertType === 'image') && !isImageExt(ext)) {
             skippedFiles.push(file.name);
             continue;
@@ -453,7 +526,7 @@ dropzone.addEventListener('drop', async (e) => {
     }
 
     if (paths.length === 0) {
-        const typeMap = { audio: '音频', video: '视频' };
+        const typeMap = { audio: '音频', video: '视频', 'file-to-pdf': '文档/图片', 'word-convert': 'Word' };
         const typeLabel = typeMap[appState.convertType] || '图片';
         let detail = '';
         if (skippedFiles.length > 0) {
@@ -580,6 +653,38 @@ function renderFileInfo() {
                 html += `
                     <div class="file-list-item">
                         <span class="file-list-audio-icon" style="background:#fce8e6">🎬</span>
+                        <span class="file-list-name">${file.name}</span>
+                        <span class="file-list-size">${file.size ? formatFileSize(file.size) : ''}</span>
+                        <button class="file-remove-btn" data-index="${appState.files.indexOf(file)}" title="移除">✕</button>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            html += `<div class="file-list-footer"><span style="font-size:13px;color:#888;">共 ${appState.files.length} 个文件</span><button class="remove-all-btn">全部移除</button></div>`;
+            fileInfo.innerHTML = html;
+        }
+    } else if (appState.convertType === 'file-to-pdf' || appState.convertType === 'word-convert') {
+        // 文档文件信息
+        const docIconMap = { 'file-to-pdf': '📄', 'word-convert': '📝' };
+        const docIcon = docIconMap[appState.convertType] || '📄';
+        if (appState.mode === 'single' && appState.files.length === 1) {
+            const file = appState.files[0];
+            fileInfo.innerHTML = `
+                <div class="file-details">
+                    <div class="audio-icon" style="background:#e8f0fe">${docIcon}</div>
+                    <div class="file-meta">
+                        <div class="file-name">${file.name}</div>
+                        ${file.size ? `<div class="file-size">${formatFileSize(file.size)}</div>` : ''}
+                        ${file.error ? `<div class="file-error">${file.error}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            let html = `<div class="file-list">`;
+            appState.files.forEach((file) => {
+                html += `
+                    <div class="file-list-item">
+                        <span class="file-list-audio-icon" style="background:#e8f0fe">${docIcon}</span>
                         <span class="file-list-name">${file.name}</span>
                         <span class="file-list-size">${file.size ? formatFileSize(file.size) : ''}</span>
                         <button class="file-remove-btn" data-index="${appState.files.indexOf(file)}" title="移除">✕</button>
@@ -872,6 +977,62 @@ convertBtn.addEventListener('click', async () => {
             });
 
             window.electronAPI.removeVideoBatchProgress();
+
+            const successCount = results.filter(r => r.success).length;
+            addLog('info', `批量转换完成: ${successCount}/${results.length} 个成功`);
+        }
+    } else if (appState.convertType === 'file-to-pdf' || appState.convertType === 'word-convert') {
+        // === 文档转换 ===
+        const isFileToPdf = appState.convertType === 'file-to-pdf';
+        const targetFmt = isFileToPdf ? '.pdf' : wordConvertFormat.value;
+
+        const options = {
+            targetFormat: targetFmt,
+            outputDir: appState.outputDir
+        };
+
+        if (appState.isSingleFile || appState.mode === 'single') {
+            addLog('info', `开始转换: ${appState.files[0].name} \u2192 ${targetFmt}`);
+
+            const result = await window.electronAPI.convertOfficeSingle({
+                inputPath: appState.files[0].path,
+                ...options
+            });
+
+            if (result.success) {
+                const ratio = result.originalSize > 0
+                    ? ((1 - result.outputSize / result.originalSize) * 100).toFixed(1)
+                    : 0;
+                addLog('success',
+                    `转换成功: ${result.outputName} (${formatFileSize(result.outputSize)}, ` +
+                    `${ratio > 0 ? `压缩 ${ratio}%` : ''})`
+                );
+                if (result.multiPage) {
+                    addLog('info', `共 ${result.pageCount} 页，默认输出第一页`);
+                }
+            } else {
+                addLog('error', `转换失败: ${result.error}`);
+            }
+        } else {
+            addLog('info', `开始批量转换 ${appState.files.length} 个文件 \u2192 ${targetFmt}`);
+            setProgress(0, appState.files.length);
+
+            window.electronAPI.onOfficeBatchProgress((data) => {
+                setProgress(data.current, data.total);
+                const r = data.lastResult;
+                if (r.success) {
+                    addLog('success', `[${r.index + 1}/${r.total}] ${r.file} \u2192 转换成功 (${formatFileSize(r.outputSize)})`);
+                } else {
+                    addLog('error', `[${r.index + 1}/${r.total}] ${r.file} \u2192 ${r.error}`);
+                }
+            });
+
+            const results = await window.electronAPI.convertOfficeBatch({
+                files: appState.files,
+                ...options
+            });
+
+            window.electronAPI.removeOfficeBatchProgress();
 
             const successCount = results.filter(r => r.success).length;
             addLog('info', `批量转换完成: ${successCount}/${results.length} 个成功`);

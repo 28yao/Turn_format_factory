@@ -38,6 +38,14 @@
                     <span class="nav-icon">🎵</span>
                     <span class="nav-label">音频转换</span>
                 </div>
+                <div class="nav-item" data-page="convert" data-type="file-to-pdf">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-label">文件转PDF</span>
+                </div>
+                <div class="nav-item" data-page="convert" data-type="word-convert">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-label">Word转换</span>
+                </div>
             </nav>
 
             <!-- 主内容区 -->
@@ -169,7 +177,32 @@
                             </div>
                         </div>
                     </div>
-
+                    
+                    <!-- 转换设置 - 文件转PDF -->
+                    <div id="file-to-pdf-settings" class="section settings-section" style="display:none">
+                        <h2 class="section-title">转换设置</h2>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>目标格式</label>
+                                <span style="font-size:14px;color:#1a73e8;font-weight:600;">PDF (.pdf)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 转换设置 - Word转换 -->
+                    <div id="word-convert-settings" class="section settings-section" style="display:none">
+                        <h2 class="section-title">转换设置</h2>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label for="word-convert-format">目标格式</label>
+                                <select id="word-convert-format">
+                                    <option value=".pdf">PDF (.pdf)</option>
+                                    <option value=".html">HTML (.html)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- 输出目录（通用） -->
                     <div class="section settings-section">
                         <div class="settings-grid">

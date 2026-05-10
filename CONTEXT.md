@@ -70,7 +70,12 @@
 - **音频附加功能**: 码率调节（仅对有损格式生效，WAV/FLAC 无损格式自动禁用）
 - **视频附加功能**: 质量调节（映射到 CRF/qscale）+ 分辨率缩放 + 保持宽高比选项
 - **GIF 输出**: 自动两遍 palette 优化 + 降帧到 15fps + 宽度限制 ≤600px，无用户参数
+- 格式映射：图片 10种输入9种输出 + 音频8种 + 视频7种 + 视频转GIF
 - **各模块引擎**: 图片 sharp + 音频 fluent-ffmpeg + 视频 fluent-ffmpeg（@ffmpeg-installer/ffmpeg）
+- **新增模块引擎**: LibreOffice 命令行（soffice），用户自行安装，不捆绑
+  - 文件转PDF：Word/Excel/PPT/图片/TXT → PDF
+  - PDF转文件：PDF → Word/Excel/PPT/图片/TXT
+  - Word转换：Word → PDF / PPT / HTML
 - **运行环境**: Windows 10及以上，Node.js v24.14.0
 - **项目位置**: `d:\31689\Documents\code\ai coding\format-factory\`
 - **打包方式**: electron-builder 打包为 Windows 安装程序
@@ -79,7 +84,19 @@
 
 - **布局结构**: 带侧边导航栏的完整布局（路线A），参考 UI.md 设计语言
 - **页面层次**: 首页（入口概览）→ 点击卡片进入对应类型的转换页
-- **侧边栏导航项**: 首页、图片转换、视频转换、音频转换
-- **首页入口卡片**: 3 张卡片横向排列（图片/视频/音频），含图标+标题+格式描述
-- **实施范围**: 图片、视频、音频转换功能完整可用
-- **页面路由**: SPA 切换，image-settings / video-settings / audio-settings 三个面板互斥显示
+- **侧边栏导航项**: 首页、图片转换、视频转换、音频转换、文件转PDF、PDF转文件、Word转换
+- **首页入口卡片**: 6 张卡片 2×3 网格排列（图片/视频/音频/文件转PDF/PDF转文件/Word转换）
+- **实施范围**: 图片、视频、音频、文件转PDF、PDF转文件、Word转换 功能完整可用
+- **页面路由**: SPA 切换，各类型设置面板互斥显示
+
+## 三个文档模块详情
+
+| 模块 | 输入格式 | 目标格式选项 | 参数 |
+|------|---------|-------------|------|
+| 文件转PDF | .docx,.xlsx,.pptx,.jpg,.png,... ,.txt | 固定 .pdf | 无（直接转换） |
+| PDF转文件 | .pdf | Word(.docx)/Excel(.xlsx)/PPT(.pptx)/图片(.png)/TXT(.txt) | 仅目标格式 |
+| Word转换 | .docx | PDF(.pdf)/PPT(.pptx)/HTML(.html) | 仅目标格式 |
+
+**引擎**: LibreOffice 命令行（soffice --headless --convert-to），用户自行安装
+**文件路径检测**: `C:\Program Files\LibreOffice\program\soffice.exe` / `C:\Program Files (x86)\...` / PATH 回退
+**功能复用**: 文件转PDF 中的 Word→PDF 与 Word转换 的 Word→PDF 共享同一后端函数
