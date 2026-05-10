@@ -1,17 +1,59 @@
 // === 状态 ===
-let state = {
+const appState = {
+    currentPage: 'home',
+    convertType: null,
     mode: 'single',
     files: [],
     outputDir: null,
     originalDir: null,
-    isSingleImage: true
+    isSingleFile: true
 };
 
 const LOSSY_FORMATS = ['.jpg', '.jpeg', '.webp', '.avif'];
 const IMAGE_FORMATS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff', '.tif', '.ico', '.avif'];
 
+// 首页卡片配置
+const HOME_CARDS = [
+    {
+        type: 'image',
+        icon: '🖼',
+        iconClass: 'image',
+        title: '图片转换',
+        formats: 'JPG / PNG / WebP / BMP\nGIF / TIFF / ICO / AVIF',
+        status: 'ready',
+        statusText: '可用',
+        actionText: '进入转换'
+    },
+    {
+        type: 'video',
+        icon: '🎬',
+        iconClass: 'video',
+        title: '视频转换',
+        formats: 'MP4 / AVI / MKV / MOV\nWMV / FLV / WebM',
+        status: 'coming',
+        statusText: '即将推出',
+        actionText: '敬请期待'
+    },
+    {
+        type: 'audio',
+        icon: '🎵',
+        iconClass: 'audio',
+        title: '音频转换',
+        formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A',
+        status: 'coming',
+        statusText: '即将推出',
+        actionText: '敬请期待'
+    }
+];
+
 // === DOM 引用 ===
 const $ = (id) => document.getElementById(id);
+
+const pageTitle = $('page-title');
+const pageHome = $('page-home');
+const pageConvert = $('page-convert');
+const sidebar = $('sidebar');
+const homeCards = $('home-cards');
 
 const modeTabs = document.querySelectorAll('.mode-tab');
 const dropzone = $('dropzone');
@@ -78,21 +120,125 @@ function setProgress(current, total) {
     progressText.textContent = `${current}/${total}`;
 }
 
-// === 模式切换 ===
+// === 页面导航 ===
 
+function navigateTo(page, convertType) {
+    appState.currentPage = page;
+    appState.convertType = convertType || null;
+
+    // 更新侧边栏
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        const p = item.dataset.page;
+        const t = item.dataset.type;
+        if ((page === 'home' && p === 'home') ||
+            (page === 'convert' && p === 'convert' && t === convertType)) {
+            item.classList.add('active');
+        }
+    });
+
+    // 切换页面显示
+    if (page === 'home') {
+        pageHome.style.display = 'block';
+        pageConvert.style.display = 'none';
+        pageTitle.textContent = '首页';
+    } else {
+        pageHome.style.display = 'none';
+        pageConvert.style.display = 'block';
+
+        // 更新标题
+        const typeNames = { image: '图片转换', video: '视频转换', audio: '音频转换' };
+        pageTitle.textContent = typeNames[convertType] || '转换';
+
+        // 检查是否为占位类型
+        if (convertType !== 'image') {
+            showComingSoon(convertType);
+        }
+    }
+}
+
+function showComingSoon(type) {
+    // 清空转换区并提示即将推出
+    const names = { video: '视频转换', audio: '音频转换' };
+    pageConvert.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:16px;">${type === 'video' ? '🎬' : '🎵'}</div>
+            <h2 style="font-size:20px;color:#333;margin-bottom:8px;">${names[type]}</h2>
+            <p style="font-size:14px;color:#888;margin-bottom:4px;">该功能正在开发中，敬请期待！</p>
+            <p style="font-size:13px;color:#aaa;">后续将支持多种视频/音频格式之间的互转</p>
+        </div>
+    `;
+}
+
+// === 渲染首页 ===
+
+function renderHome() {
+    homeCards.innerHTML = HOME_CARDS.map(card => `
+        <div class="home-card" data-type="${card.type}">
+            <div class="card-icon-wrap ${card.iconClass}">${card.icon}</div>
+            <div class="card-title">${card.title}</div>
+            <div class="card-formats">${card.formats.replace(/\n/g, '<br>')}</div>
+            <span class="card-status ${card.status}">${card.statusText}</span>
+            <button class="card-action ${card.status !== 'ready' ? 'disabled' : ''}">
+                ${card.actionText}
+            </button>
+        </div>
+    `).join('');
+}
+
+// === 首页卡片点击 ===
+homeCards.addEventListener('click', (e) => {
+    const card = e.target.closest('.home-card');
+    if (!card) return;
+    const type = card.dataset.type;
+    if (type === 'image') {
+        navigateTo('convert', 'image');
+    } else {
+        addLog('info', `${type === 'video' ? '视频' : '音频'}转换功能即将推出`);
+    }
+});
+
+// 首页卡片按钮点击（阻止冒泡 + 独立处理）
+homeCards.addEventListener('click', (e) => {
+    const btn = e.target.closest('.card-action');
+    if (!btn) return;
+    e.stopPropagation();
+    const card = btn.closest('.home-card');
+    const type = card.dataset.type;
+    if (type === 'image') {
+        navigateTo('convert', 'image');
+    }
+});
+
+// === 侧边栏导航 ===
+sidebar.addEventListener('click', (e) => {
+    const item = e.target.closest('.nav-item');
+    if (!item) return;
+
+    const page = item.dataset.page;
+    const type = item.dataset.type;
+
+    if (page === 'home') {
+        navigateTo('home');
+    } else if (page === 'convert') {
+        navigateTo('convert', type);
+    }
+});
+
+// === 模式切换 ===
 modeTabs.forEach(tab => {
     tab.addEventListener('click', () => {
         modeTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        state.mode = tab.dataset.mode;
-        state.files = [];
-        state.outputDir = null;
-        state.originalDir = null;
+        appState.mode = tab.dataset.mode;
+        appState.files = [];
+        appState.outputDir = null;
+        appState.originalDir = null;
         fileInfo.style.display = 'none';
         convertBtn.disabled = true;
         clearLogs();
 
-        if (state.mode === 'single') {
+        if (appState.mode === 'single') {
             dropzoneLabel.textContent = '点击选择文件或拖拽图片到此处';
             selectBtn.textContent = '选择文件';
         } else {
@@ -103,30 +249,28 @@ modeTabs.forEach(tab => {
 });
 
 // === 文件选择 ===
-
-// 点击选择按钮
 selectBtn.addEventListener('click', async () => {
     let result;
-    if (state.mode === 'single') {
+    if (appState.mode === 'single') {
         result = await window.electronAPI.selectFiles();
     } else {
         result = await window.electronAPI.selectFolder();
     }
 
     if (result.files && result.files.length > 0) {
-        state.files = result.files;
-        state.isSingleImage = state.files.length === 1;
+        appState.files = result.files;
+        appState.isSingleFile = result.files.length === 1;
         if (result.folderPath) {
-            state.originalDir = result.folderPath;
+            appState.originalDir = result.folderPath;
         } else {
-            state.originalDir = null;
+            appState.originalDir = null;
         }
         renderFileInfo();
         convertBtn.disabled = false;
     }
 });
 
-// 拖拽支持
+// 拖拽
 dropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropzone.classList.add('dragover');
@@ -143,8 +287,6 @@ dropzone.addEventListener('drop', async (e) => {
     const files = e.dataTransfer.files;
     if (files.length === 0) return;
 
-    // 对于拖拽，我们用 file-input 的 files，实际通过 IPC 读取路径
-    // 由于 Electron 拖拽可以获得路径
     const paths = [];
     for (const file of files) {
         if (file.path) {
@@ -158,10 +300,7 @@ dropzone.addEventListener('drop', async (e) => {
         return;
     }
 
-    // 构造模拟结果
     const result = { files: [] };
-    const isDir = paths.length > 1 && state.mode === 'batch';
-
     for (const filePath of paths) {
         result.files.push({
             path: filePath,
@@ -170,20 +309,19 @@ dropzone.addEventListener('drop', async (e) => {
         });
     }
 
-    state.files = result.files;
-    state.isSingleImage = state.files.length === 1;
-    state.originalDir = null;
+    appState.files = result.files;
+    appState.isSingleFile = result.files.length === 1;
+    appState.originalDir = null;
     renderFileInfo();
     convertBtn.disabled = false;
 });
 
 // === 渲染文件信息 ===
-
 function renderFileInfo() {
     fileInfo.style.display = 'block';
 
-    if (state.mode === 'single' && state.files.length === 1) {
-        const file = state.files[0];
+    if (appState.mode === 'single' && appState.files.length === 1) {
+        const file = appState.files[0];
         fileInfo.innerHTML = `
             <div class="file-details">
                 <img class="file-thumb" src="file:///${file.path.replace(/\\/g, '/')}" alt="${file.name}"
@@ -197,15 +335,13 @@ function renderFileInfo() {
             </div>
         `;
 
-        // 自动填充原始尺寸
         if (file.width && file.height) {
             resizeWidth.value = file.width;
             resizeHeight.value = file.height;
         }
     } else {
-        // 批量模式
         let html = `<div class="file-list">`;
-        state.files.forEach((file, i) => {
+        appState.files.forEach((file) => {
             const iconPath = `file:///${file.path.replace(/\\/g, '/')}`;
             html += `
                 <div class="file-list-item">
@@ -216,22 +352,19 @@ function renderFileInfo() {
             `;
         });
         html += `</div>`;
-        html += `<div style="margin-top:8px;font-size:13px;color:#888;">共 ${state.files.length} 个文件</div>`;
+        html += `<div style="margin-top:8px;font-size:13px;color:#888;">共 ${appState.files.length} 个文件</div>`;
         fileInfo.innerHTML = html;
 
-        // 批量清除尺寸预设
         resizeWidth.value = '';
         resizeHeight.value = '';
     }
 }
 
 // === 质量滑块 ===
-
 qualitySlider.addEventListener('input', () => {
     qualityValue.textContent = qualitySlider.value + '%';
 });
 
-// 格式变更时更新质量状态
 targetFormat.addEventListener('change', () => {
     const fmt = targetFormat.value;
     if (LOSSY_FORMATS.includes(fmt)) {
@@ -245,27 +378,24 @@ targetFormat.addEventListener('change', () => {
 });
 
 // === 原始尺寸按钮 ===
-
 resizeOriginalBtn.addEventListener('click', () => {
-    if (state.files.length === 1) {
-        const file = state.files[0];
+    if (appState.files.length === 1) {
+        const file = appState.files[0];
         if (file.width && file.height) {
             resizeWidth.value = file.width;
             resizeHeight.value = file.height;
         }
     } else {
-        // 批量模式下清空
         resizeWidth.value = '';
         resizeHeight.value = '';
     }
 });
 
 // === 输出目录 ===
-
 selectOutputBtn.addEventListener('click', async () => {
     const result = await window.electronAPI.selectOutput();
     if (result.path) {
-        state.outputDir = result.path;
+        appState.outputDir = result.path;
         outputDirInput.value = result.path;
     }
 });
@@ -273,15 +403,14 @@ selectOutputBtn.addEventListener('click', async () => {
 outputDirInput.addEventListener('click', async () => {
     const result = await window.electronAPI.selectOutput();
     if (result.path) {
-        state.outputDir = result.path;
+        appState.outputDir = result.path;
         outputDirInput.value = result.path;
     }
 });
 
 // === 开始转换 ===
-
 convertBtn.addEventListener('click', async () => {
-    if (state.files.length === 0) return;
+    if (appState.files.length === 0) return;
 
     clearLogs();
     convertBtn.disabled = true;
@@ -298,15 +427,14 @@ convertBtn.addEventListener('click', async () => {
         quality,
         resize: (resizeOpts.width || resizeOpts.height) ? resizeOpts : null,
         keepAspectRatio: keepAR,
-        outputDir: state.outputDir
+        outputDir: appState.outputDir
     };
 
-    if (state.isSingleImage || state.mode === 'single') {
-        // 单张转换
-        addLog('info', `开始转换: ${state.files[0].name} → ${targetFmt}`);
+    if (appState.isSingleFile || appState.mode === 'single') {
+        addLog('info', `开始转换: ${appState.files[0].name} → ${targetFmt}`);
 
         const result = await window.electronAPI.convertSingle({
-            inputPath: state.files[0].path,
+            inputPath: appState.files[0].path,
             ...options
         });
 
@@ -322,11 +450,9 @@ convertBtn.addEventListener('click', async () => {
             addLog('error', `转换失败: ${result.error}`);
         }
     } else {
-        // 批量转换
-        addLog('info', `开始批量转换 ${state.files.length} 个文件 → ${targetFmt}`);
-        setProgress(0, state.files.length);
+        addLog('info', `开始批量转换 ${appState.files.length} 个文件 → ${targetFmt}`);
+        setProgress(0, appState.files.length);
 
-        // 监听进度
         window.electronAPI.onBatchProgress((data) => {
             setProgress(data.current, data.total);
             const r = data.lastResult;
@@ -338,7 +464,7 @@ convertBtn.addEventListener('click', async () => {
         });
 
         const results = await window.electronAPI.convertBatch({
-            files: state.files,
+            files: appState.files,
             ...options
         });
 
@@ -352,6 +478,5 @@ convertBtn.addEventListener('click', async () => {
 });
 
 // === 初始化 ===
-
-// 默认触发一次格式变更以设置质量状态
+renderHome();
 targetFormat.dispatchEvent(new Event('change'));

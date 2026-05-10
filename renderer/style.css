@@ -10,34 +10,234 @@ body {
     background: #f0f2f5;
     color: #333;
     min-height: 100vh;
+    overflow: hidden;
 }
 
 #app {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
 }
 
-/* === 标题栏 === */
-header {
-    text-align: center;
-    margin-bottom: 24px;
+/* === 顶部栏 === */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 20px;
+    background: linear-gradient(135deg, #1a73e8, #1557b0);
+    color: #fff;
+    flex-shrink: 0;
+    -webkit-app-region: drag;
 }
 
-header h1 {
-    font-size: 28px;
+.topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-icon {
+    font-size: 22px;
+}
+
+.logo-text {
+    font-size: 16px;
     font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.topbar-title {
+    font-size: 14px;
+    opacity: 0.85;
+}
+
+/* === 主体布局 === */
+.app-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* === 侧边栏 === */
+.sidebar {
+    width: 200px;
+    background: #fff;
+    border-right: 1px solid #e8eaed;
+    padding: 12px 0;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+    user-select: none;
+}
+
+.nav-item:hover {
+    background: #f1f3f4;
     color: #1a73e8;
-    letter-spacing: 2px;
 }
 
-.subtitle {
-    font-size: 13px;
+.nav-item.active {
+    background: #e8f0fe;
+    color: #1a73e8;
+    font-weight: 600;
+    border-left-color: #1a73e8;
+}
+
+.nav-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.nav-label {
+    flex: 1;
+}
+
+/* === 主内容区 === */
+.main-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    background: #f0f2f5;
+}
+
+/* === 首页 === */
+.home-hero {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.home-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.home-desc {
+    font-size: 14px;
     color: #888;
-    margin-top: 4px;
 }
 
-/* === 通用区域 === */
+.home-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 780px;
+    margin: 0 auto;
+}
+
+.home-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    transition: all 0.25s;
+    border: 1px solid #e8eaed;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.home-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    border-color: #1a73e8;
+}
+
+.card-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    margin-bottom: 16px;
+}
+
+.card-icon-wrap.image {
+    background: #e8f0fe;
+}
+
+.card-icon-wrap.video {
+    background: #fce8e6;
+}
+
+.card-icon-wrap.audio {
+    background: #e6f4ea;
+}
+
+.card-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.card-formats {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    min-height: 36px;
+}
+
+.card-status {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.card-status.ready {
+    background: #e6f4ea;
+    color: #1e7e34;
+}
+
+.card-status.coming {
+    background: #f1f3f4;
+    color: #999;
+}
+
+.card-action {
+    margin-top: 12px;
+    padding: 8px 24px;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.card-action:hover {
+    background: #1557b0;
+}
+
+.card-action.disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* === 转换页通用区域 === */
 .section {
     background: #fff;
     border-radius: 10px;
@@ -283,7 +483,6 @@ header h1 {
     flex-shrink: 0;
 }
 
-/* 目标格式下拉 */
 #target-format {
     flex: 1;
     padding: 8px 12px;
@@ -300,7 +499,6 @@ header h1 {
     border-color: #1a73e8;
 }
 
-/* 质量滑块 */
 .quality-control {
     display: flex;
     align-items: center;
@@ -336,7 +534,6 @@ header h1 {
     text-align: right;
 }
 
-/* 尺寸缩放 */
 .resize-control {
     display: flex;
     align-items: center;
@@ -363,7 +560,6 @@ header h1 {
     font-size: 16px;
 }
 
-/* 复选框 */
 .checkbox-label {
     display: flex;
     align-items: center;
@@ -378,7 +574,6 @@ header h1 {
     accent-color: #1a73e8;
 }
 
-/* 输出目录 */
 .output-control {
     display: flex;
     align-items: center;
