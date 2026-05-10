@@ -4,6 +4,7 @@ const { promises: fsp } = require('fs');
 const FfmpegCommand = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffprobePath = require('path').join(require('path').dirname(ffmpegPath), 'ffprobe.exe');
+const { decryptAudio, isEncryptedFile } = require('./decryptAudio');
 
 // 设置 FFmpeg 路径
 FfmpegCommand.setFfmpegPath(ffmpegPath);
@@ -22,7 +23,8 @@ const AUDIO_FORMATS = [
 ];
 
 const LOSSY_AUDIO_FORMATS = ['.mp3', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
-const ALL_AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
+const ALL_AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.ncm'];
+const ENCRYPTED_AUDIO_EXTS = ['.kgm', '.kgma', '.ncm'];
 
 /**
  * 获取音频文件信息（通过 ffprobe）
@@ -31,6 +33,19 @@ async function getAudioInfo(filePath) {
     const stat = fs.statSync(filePath);
     const name = path.basename(filePath);
     const ext = path.extname(filePath).toLowerCase();
+
+    // 加密格式（KGM/NCM）ffprobe 无法解析，直接返回基本信息
+    if (ENCRYPTED_AUDIO_EXTS.includes(ext)) {
+        return {
+            path: filePath,
+            name,
+            ext,
+            size: stat.size,
+            format: ext.slice(1).toUpperCase(),
+            encrypted: true,
+            encryptedType: ext === '.ncm' ? 'NCM (网易云加密)' : 'KGM (酷狗加密)'
+        };
+    }
 
     return new Promise((resolve, reject) => {
         FfmpegCommand.ffprobe(filePath, (err, metadata) => {
@@ -111,14 +126,29 @@ async function convertAudio(inputPath, targetFormat, options = {}) {
         throw new Error(`不支持输出格式: ${targetExt}`);
     }
 
+    // 如果是加密格式，先解密
+    let effectiveInputPath = inputPath;
+    let tempDecryptDir = null;
+    const encCheck = isEncryptedFile(inputPath);
+    if (encCheck.encrypted) {
+        // 确定输出目录
+        const decryptDir = outputDir || path.dirname(inputPath);
+        // 先解密到输出目录
+        effectiveInputPath = await decryptAudio(inputPath, decryptDir);
+        // 如果解密后的文件路径跟 inputPath 不同，且输出目录就是解密目录，记录以便清理
+        if (effectiveInputPath !== inputPath) {
+            tempDecryptDir = effectiveInputPath;
+        }
+    }
+
     // 构建输出路径
-    const outputPath = buildOutputPath(inputPath, targetExt, outputDir);
+    const outputPath = buildOutputPath(effectiveInputPath, targetExt, outputDir);
 
     // 获取输入文件信息
-    const info = await getAudioInfo(inputPath);
+    const info = await getAudioInfo(effectiveInputPath);
 
     return new Promise((resolve, reject) => {
-        const command = new FfmpegCommand(inputPath);
+        const command = new FfmpegCommand(effectiveInputPath);
 
         // 设置输出容器格式
         command.outputFormat(fmt.container);
@@ -170,5 +200,6 @@ module.exports = {
     AUDIO_FORMATS,
     LOSSY_AUDIO_FORMATS,
     ALL_AUDIO_EXTS,
+    ENCRYPTED_AUDIO_EXTS,
     findFormat
 };

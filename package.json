@@ -31,6 +31,8 @@
   "license": "MIT",
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@lengineerc/ncm-convertor": "^1.0.4",
+    "@xhacker/kgmwasm": "^1.0.0",
     "electron": "^42.0.1",
     "electron-builder": "^26.8.1",
     "fluent-ffmpeg": "^2.1.3",

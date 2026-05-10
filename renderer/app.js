@@ -12,8 +12,9 @@ const appState = {
 const LOSSY_FORMATS = ['.jpg', '.jpeg', '.webp', '.avif'];
 const IMAGE_FORMATS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff', '.tif', '.ico', '.avif'];
 
-const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
+const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma', '.kgm', '.kgma', '.ncm'];
 const AUDIO_LOSSY_FORMATS = ['.mp3', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
+const ENCRYPTED_AUDIO_EXTS = ['.kgm', '.kgma', '.ncm'];
 
 // 音频格式码率范围映射
 const AUDIO_BITRATE_MAP = {
@@ -52,7 +53,7 @@ const HOME_CARDS = [
         icon: '🎵',
         iconClass: 'audio',
         title: '音频转换',
-        formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A / Opus',
+        formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A / Opus\n+KGM / NCM 加密解密',
         status: 'ready',
         statusText: '可用',
         actionText: '进入转换'
@@ -122,6 +123,14 @@ function getExtFromPath(filePath) {
         if (name.endsWith(ext)) return ext;
     }
     return '';
+}
+
+function isAudioExt(ext) {
+    return AUDIO_EXTS.includes(ext);
+}
+
+function isImageExt(ext) {
+    return IMAGE_FORMATS.includes(ext);
 }
 
 function formatDuration(seconds) {
@@ -361,33 +370,47 @@ dropzone.addEventListener('drop', async (e) => {
     if (files.length === 0) return;
 
     const paths = [];
+    const skippedFiles = [];
+
     for (const file of files) {
-        if (file.path) {
-            const ext = getExtFromPath(file.path);
-            if (ext) paths.push(file.path);
+        // 优先使用 file.path（Electron 完整路径），否则用 file.name 兜底
+        const sourcePath = file.path || file.name;
+        const ext = getExtFromPath(sourcePath);
+
+        if (!ext) {
+            skippedFiles.push(file.name);
+            continue;
         }
+
+        // 根据当前页面类型过滤：音频页只接受音频，图片页只接受图片
+        if (appState.convertType === 'audio' && !isAudioExt(ext)) {
+            skippedFiles.push(file.name);
+            continue;
+        }
+        if ((!appState.convertType || appState.convertType === 'image') && !isImageExt(ext)) {
+            skippedFiles.push(file.name);
+            continue;
+        }
+
+        paths.push({
+            path: file.path || sourcePath,
+            name: file.name,
+            ext: ext
+        });
     }
 
     if (paths.length === 0) {
         const typeLabel = appState.convertType === 'audio' ? '音频' : '图片';
-        addLog('error', `请拖拽支持的${typeLabel}格式文件`);
+        const detail = skippedFiles.length > 0 ? `（不支持: ${skippedFiles.slice(0, 3).join(', ')}${skippedFiles.length > 3 ? '...' : ''}）` : '';
+        addLog('error', `请拖拽支持的${typeLabel}格式文件${detail}`);
         return;
     }
 
-    const result = { files: [] };
-    for (const filePath of paths) {
-        result.files.push({
-            path: filePath,
-            name: filePath.split('\\').pop().split('/').pop(),
-            ext: getExtFromPath(filePath)
-        });
-    }
-
-    appState.files = result.files;
-    appState.isSingleFile = result.files.length === 1;
+    appState.files = paths;
+    appState.isSingleFile = paths.length === 1;
     appState.originalDir = null;
-    renderFileInfo();
     convertBtn.disabled = false;
+    renderFileInfo();
 });
 
 // === 渲染文件信息 ===
@@ -398,17 +421,23 @@ function renderFileInfo() {
         // 音频文件信息
         if (appState.mode === 'single' && appState.files.length === 1) {
             const file = appState.files[0];
+            const ext = file.ext ? file.ext.toLowerCase() : '';
+            const isEncrypted = ENCRYPTED_AUDIO_EXTS.includes(ext);
+            const formatBadge = isEncrypted ?
+                `<span class="audio-format-badge encrypted">${ext === '.ncm' ? 'NCM' : 'KGM'} 加密</span>` :
+                `<span class="audio-format-badge">${ext.slice(1).toUpperCase()}</span>`;
             fileInfo.innerHTML = `
                 <div class="file-details">
                     <div class="audio-icon">🎵</div>
                     <div class="file-meta">
-                        <div class="file-name">${file.name}</div>
+                        <div class="file-name">${file.name} ${formatBadge}</div>
                         ${file.duration ? `<div class="file-dimensions">时长: ${formatDuration(file.duration)}</div>` : ''}
                         ${file.bitrate ? `<div class="file-dimensions">码率: ${formatBitrate(file.bitrate)}</div>` : ''}
                         ${file.sampleRate ? `<div class="file-dimensions">采样率: ${file.sampleRate} Hz</div>` : ''}
                         ${file.channels ? `<div class="file-dimensions">声道: ${file.channels === 1 ? '单声道' : file.channels === 2 ? '立体声' : file.channels + ' 声道'}</div>` : ''}
                         ${file.size ? `<div class="file-size">${formatFileSize(file.size)}</div>` : ''}
-                        ${file.error ? `<div class="file-error">${file.error}</div>` : ''}
+                        ${file.encrypted ? `<div class="file-decrypt-note">${file.encryptedType}，将先解密再转换为目标格式</div>` : ''}
+                        ${file.error && !file.encrypted ? `<div class="file-error">${file.error}</div>` : ''}
                     </div>
                 </div>
             `;

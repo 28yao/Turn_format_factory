@@ -476,6 +476,34 @@ body {
     flex-shrink: 0;
 }
 
+/* 音频格式徽章 */
+.audio-format-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #e8f0fe;
+    color: #1a73e8;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.audio-format-badge.encrypted {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+.file-decrypt-note {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #e37400;
+    background: #fef7e0;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
 .file-list-name {
     flex: 1;
     overflow: hidden;
