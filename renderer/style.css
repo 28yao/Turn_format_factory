@@ -450,6 +450,32 @@ body {
     background: #f0f0f0;
 }
 
+.file-list-audio-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e6f4ea;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.audio-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e6f4ea;
+    font-size: 32px;
+    margin-right: 16px;
+    flex-shrink: 0;
+}
+
 .file-list-name {
     flex: 1;
     overflow: hidden;

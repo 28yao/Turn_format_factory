@@ -12,6 +12,19 @@ const appState = {
 const LOSSY_FORMATS = ['.jpg', '.jpeg', '.webp', '.avif'];
 const IMAGE_FORMATS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff', '.tif', '.ico', '.avif'];
 
+const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
+const AUDIO_LOSSY_FORMATS = ['.mp3', '.aac', '.ogg', '.m4a', '.opus', '.wma'];
+
+// 音频格式码率范围映射
+const AUDIO_BITRATE_MAP = {
+    '.mp3': { min: 32, max: 320, step: 32 },
+    '.aac': { min: 32, max: 320, step: 32 },
+    '.ogg': { min: 32, max: 320, step: 32 },
+    '.m4a': { min: 32, max: 320, step: 32 },
+    '.opus': { min: 6, max: 510, step: 16 },
+    '.wma': { min: 32, max: 320, step: 32 }
+};
+
 // 首页卡片配置
 const HOME_CARDS = [
     {
@@ -39,10 +52,10 @@ const HOME_CARDS = [
         icon: '🎵',
         iconClass: 'audio',
         title: '音频转换',
-        formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A',
-        status: 'coming',
-        statusText: '即将推出',
-        actionText: '敬请期待'
+        formats: 'MP3 / WAV / FLAC / AAC\nOGG / WMA / M4A / Opus',
+        status: 'ready',
+        statusText: '可用',
+        actionText: '进入转换'
     }
 ];
 
@@ -61,6 +74,9 @@ const dropzoneLabel = $('dropzone-label');
 const selectBtn = $('select-btn');
 const fileInput = $('file-input');
 const fileInfo = $('file-info');
+
+// 图片设置
+const imageSettings = $('image-settings');
 const targetFormat = $('target-format');
 const qualitySlider = $('quality-slider');
 const qualityValue = $('quality-value');
@@ -68,6 +84,16 @@ const resizeWidth = $('resize-width');
 const resizeHeight = $('resize-height');
 const resizeOriginalBtn = $('resize-original-btn');
 const keepAspectRatio = $('keep-aspect-ratio');
+
+// 音频设置
+const audioSettings = $('audio-settings');
+const audioTargetFormat = $('audio-target-format');
+const bitrateSlider = $('bitrate-slider');
+const bitrateValue = $('bitrate-value');
+
+// 通用
+const videoPlaceholder = $('video-placeholder');
+
 const outputDirInput = $('output-dir');
 const selectOutputBtn = $('select-output-btn');
 const convertBtn = $('convert-btn');
@@ -87,10 +113,27 @@ function formatFileSize(bytes) {
 
 function getExtFromPath(filePath) {
     const name = filePath.toLowerCase();
+    // 先检查音频扩展名
+    for (const ext of AUDIO_EXTS) {
+        if (name.endsWith(ext)) return ext;
+    }
+    // 再检查图片扩展名
     for (const ext of IMAGE_FORMATS) {
         if (name.endsWith(ext)) return ext;
     }
     return '';
+}
+
+function formatDuration(seconds) {
+    if (!seconds || seconds <= 0) return '';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatBitrate(bps) {
+    if (!bps || bps <= 0) return '';
+    return Math.round(bps / 1000) + 'kbps';
 }
 
 function now() {
@@ -120,9 +163,33 @@ function setProgress(current, total) {
     progressText.textContent = `${current}/${total}`;
 }
 
+function updateDropzoneText() {
+    if (appState.convertType === 'audio') {
+        if (appState.mode === 'single') {
+            dropzoneLabel.textContent = '点击选择文件或拖拽音频到此处';
+        } else {
+            dropzoneLabel.textContent = '点击选择文件夹或拖拽音频到此处';
+        }
+    } else {
+        if (appState.mode === 'single') {
+            dropzoneLabel.textContent = '点击选择文件或拖拽图片到此处';
+        } else {
+            dropzoneLabel.textContent = '点击选择文件夹或拖拽图片到此处';
+        }
+    }
+}
+
 // === 页面导航 ===
 
 function navigateTo(page, convertType) {
+    // 重置状态
+    appState.files = [];
+    appState.outputDir = null;
+    appState.originalDir = null;
+    fileInfo.style.display = 'none';
+    convertBtn.disabled = true;
+    clearLogs();
+
     appState.currentPage = page;
     appState.convertType = convertType || null;
 
@@ -150,24 +217,27 @@ function navigateTo(page, convertType) {
         const typeNames = { image: '图片转换', video: '视频转换', audio: '音频转换' };
         pageTitle.textContent = typeNames[convertType] || '转换';
 
-        // 检查是否为占位类型
-        if (convertType !== 'image') {
-            showComingSoon(convertType);
-        }
-    }
-}
+        // 切换对应的设置面板
+        imageSettings.style.display = 'none';
+        audioSettings.style.display = 'none';
+        videoPlaceholder.style.display = 'none';
+        document.querySelector('.mode-tabs').style.display = 'flex';
+        document.querySelector('#dropzone').closest('.section').style.display = 'block';
 
-function showComingSoon(type) {
-    // 清空转换区并提示即将推出
-    const names = { video: '视频转换', audio: '音频转换' };
-    pageConvert.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;">
-            <div style="font-size:48px;margin-bottom:16px;">${type === 'video' ? '🎬' : '🎵'}</div>
-            <h2 style="font-size:20px;color:#333;margin-bottom:8px;">${names[type]}</h2>
-            <p style="font-size:14px;color:#888;margin-bottom:4px;">该功能正在开发中，敬请期待！</p>
-            <p style="font-size:13px;color:#aaa;">后续将支持多种视频/音频格式之间的互转</p>
-        </div>
-    `;
+        if (convertType === 'image') {
+            imageSettings.style.display = 'block';
+        } else if (convertType === 'audio') {
+            audioSettings.style.display = 'block';
+            updateAudioBitrateRange();
+        } else {
+            // 视频占位
+            videoPlaceholder.style.display = 'block';
+            document.querySelector('.mode-tabs').style.display = 'none';
+            document.querySelector('#dropzone').closest('.section').style.display = 'none';
+        }
+
+        updateDropzoneText();
+    }
 }
 
 // === 渲染首页 ===
@@ -191,10 +261,10 @@ homeCards.addEventListener('click', (e) => {
     const card = e.target.closest('.home-card');
     if (!card) return;
     const type = card.dataset.type;
-    if (type === 'image') {
-        navigateTo('convert', 'image');
-    } else {
-        addLog('info', `${type === 'video' ? '视频' : '音频'}转换功能即将推出`);
+    if (type === 'image' || type === 'audio') {
+        navigateTo('convert', type);
+    } else if (type === 'video') {
+        navigateTo('convert', 'video');
     }
 });
 
@@ -205,8 +275,8 @@ homeCards.addEventListener('click', (e) => {
     e.stopPropagation();
     const card = btn.closest('.home-card');
     const type = card.dataset.type;
-    if (type === 'image') {
-        navigateTo('convert', 'image');
+    if (type === 'image' || type === 'audio') {
+        navigateTo('convert', type);
     }
 });
 
@@ -238,23 +308,26 @@ modeTabs.forEach(tab => {
         convertBtn.disabled = true;
         clearLogs();
 
-        if (appState.mode === 'single') {
-            dropzoneLabel.textContent = '点击选择文件或拖拽图片到此处';
-            selectBtn.textContent = '选择文件';
-        } else {
-            dropzoneLabel.textContent = '点击选择文件夹或拖拽图片到此处';
-            selectBtn.textContent = '选择文件夹';
-        }
+        updateDropzoneText();
     });
 });
 
 // === 文件选择 ===
 selectBtn.addEventListener('click', async () => {
     let result;
-    if (appState.mode === 'single') {
-        result = await window.electronAPI.selectFiles();
+
+    if (appState.convertType === 'audio') {
+        if (appState.mode === 'single') {
+            result = await window.electronAPI.selectAudioFiles();
+        } else {
+            result = await window.electronAPI.selectAudioFolder();
+        }
     } else {
-        result = await window.electronAPI.selectFolder();
+        if (appState.mode === 'single') {
+            result = await window.electronAPI.selectFiles();
+        } else {
+            result = await window.electronAPI.selectFolder();
+        }
     }
 
     if (result.files && result.files.length > 0) {
@@ -296,7 +369,8 @@ dropzone.addEventListener('drop', async (e) => {
     }
 
     if (paths.length === 0) {
-        addLog('error', '请拖拽支持的图片格式文件');
+        const typeLabel = appState.convertType === 'audio' ? '音频' : '图片';
+        addLog('error', `请拖拽支持的${typeLabel}格式文件`);
         return;
     }
 
@@ -320,47 +394,83 @@ dropzone.addEventListener('drop', async (e) => {
 function renderFileInfo() {
     fileInfo.style.display = 'block';
 
-    if (appState.mode === 'single' && appState.files.length === 1) {
-        const file = appState.files[0];
-        fileInfo.innerHTML = `
-            <div class="file-details">
-                <img class="file-thumb" src="file:///${file.path.replace(/\\/g, '/')}" alt="${file.name}"
-                     onerror="this.style.display='none'">
-                <div class="file-meta">
-                    <div class="file-name">${file.name}</div>
-                    ${file.width ? `<div class="file-dimensions">${file.width} × ${file.height} 像素</div>` : ''}
-                    ${file.size ? `<div class="file-size">${formatFileSize(file.size)}</div>` : ''}
-                    ${file.error ? `<div class="file-error">${file.error}</div>` : ''}
-                </div>
-            </div>
-        `;
-
-        if (file.width && file.height) {
-            resizeWidth.value = file.width;
-            resizeHeight.value = file.height;
-        }
-    } else {
-        let html = `<div class="file-list">`;
-        appState.files.forEach((file) => {
-            const iconPath = `file:///${file.path.replace(/\\/g, '/')}`;
-            html += `
-                <div class="file-list-item">
-                    <img class="file-list-icon" src="${iconPath}" onerror="this.style.display='none'">
-                    <span class="file-list-name">${file.name}</span>
-                    <span class="file-list-size">${file.size ? formatFileSize(file.size) : ''}</span>
+    if (appState.convertType === 'audio') {
+        // 音频文件信息
+        if (appState.mode === 'single' && appState.files.length === 1) {
+            const file = appState.files[0];
+            fileInfo.innerHTML = `
+                <div class="file-details">
+                    <div class="audio-icon">🎵</div>
+                    <div class="file-meta">
+                        <div class="file-name">${file.name}</div>
+                        ${file.duration ? `<div class="file-dimensions">时长: ${formatDuration(file.duration)}</div>` : ''}
+                        ${file.bitrate ? `<div class="file-dimensions">码率: ${formatBitrate(file.bitrate)}</div>` : ''}
+                        ${file.sampleRate ? `<div class="file-dimensions">采样率: ${file.sampleRate} Hz</div>` : ''}
+                        ${file.channels ? `<div class="file-dimensions">声道: ${file.channels === 1 ? '单声道' : file.channels === 2 ? '立体声' : file.channels + ' 声道'}</div>` : ''}
+                        ${file.size ? `<div class="file-size">${formatFileSize(file.size)}</div>` : ''}
+                        ${file.error ? `<div class="file-error">${file.error}</div>` : ''}
+                    </div>
                 </div>
             `;
-        });
-        html += `</div>`;
-        html += `<div style="margin-top:8px;font-size:13px;color:#888;">共 ${appState.files.length} 个文件</div>`;
-        fileInfo.innerHTML = html;
+        } else {
+            let html = `<div class="file-list">`;
+            appState.files.forEach((file) => {
+                html += `
+                    <div class="file-list-item">
+                        <span class="file-list-audio-icon">🎵</span>
+                        <span class="file-list-name">${file.name}</span>
+                        <span class="file-list-size">${file.size ? formatFileSize(file.size) : ''}</span>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            html += `<div style="margin-top:8px;font-size:13px;color:#888;">共 ${appState.files.length} 个文件</div>`;
+            fileInfo.innerHTML = html;
+        }
+    } else {
+        // 图片文件信息
+        if (appState.mode === 'single' && appState.files.length === 1) {
+            const file = appState.files[0];
+            fileInfo.innerHTML = `
+                <div class="file-details">
+                    <img class="file-thumb" src="file:///${file.path.replace(/\\/g, '/')}" alt="${file.name}"
+                         onerror="this.style.display='none'">
+                    <div class="file-meta">
+                        <div class="file-name">${file.name}</div>
+                        ${file.width ? `<div class="file-dimensions">${file.width} × ${file.height} 像素</div>` : ''}
+                        ${file.size ? `<div class="file-size">${formatFileSize(file.size)}</div>` : ''}
+                        ${file.error ? `<div class="file-error">${file.error}</div>` : ''}
+                    </div>
+                </div>
+            `;
 
-        resizeWidth.value = '';
-        resizeHeight.value = '';
+            if (file.width && file.height) {
+                resizeWidth.value = file.width;
+                resizeHeight.value = file.height;
+            }
+        } else {
+            let html = `<div class="file-list">`;
+            appState.files.forEach((file) => {
+                const iconPath = `file:///${file.path.replace(/\\/g, '/')}`;
+                html += `
+                    <div class="file-list-item">
+                        <img class="file-list-icon" src="${iconPath}" onerror="this.style.display='none'">
+                        <span class="file-list-name">${file.name}</span>
+                        <span class="file-list-size">${file.size ? formatFileSize(file.size) : ''}</span>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            html += `<div style="margin-top:8px;font-size:13px;color:#888;">共 ${appState.files.length} 个文件</div>`;
+            fileInfo.innerHTML = html;
+
+            resizeWidth.value = '';
+            resizeHeight.value = '';
+        }
     }
 }
 
-// === 质量滑块 ===
+// === 图片设置：质量滑块 ===
 qualitySlider.addEventListener('input', () => {
     qualityValue.textContent = qualitySlider.value + '%';
 });
@@ -377,7 +487,7 @@ targetFormat.addEventListener('change', () => {
     }
 });
 
-// === 原始尺寸按钮 ===
+// === 图片设置：原始尺寸按钮 ===
 resizeOriginalBtn.addEventListener('click', () => {
     if (appState.files.length === 1) {
         const file = appState.files[0];
@@ -389,6 +499,41 @@ resizeOriginalBtn.addEventListener('click', () => {
         resizeWidth.value = '';
         resizeHeight.value = '';
     }
+});
+
+// === 音频设置：目标格式切换 ===
+function updateAudioBitrateRange() {
+    const fmt = audioTargetFormat.value;
+    const range = AUDIO_BITRATE_MAP[fmt];
+    if (range && AUDIO_LOSSY_FORMATS.includes(fmt)) {
+        bitrateSlider.disabled = false;
+        bitrateSlider.min = range.min;
+        bitrateSlider.max = range.max;
+        bitrateSlider.step = range.step;
+        // 调整当前值到有效范围内
+        let val = parseInt(bitrateSlider.value);
+        if (val < range.min) val = range.min;
+        if (val > range.max) val = range.max;
+        // 对齐到 step
+        val = Math.round(val / range.step) * range.step;
+        bitrateSlider.value = val;
+        bitrateValue.textContent = val + 'kbps';
+        bitrateValue.style.color = '#1a73e8';
+    } else {
+        // WAV/FLAC 等无损格式，禁用码率
+        bitrateSlider.disabled = true;
+        bitrateValue.textContent = 'N/A';
+        bitrateValue.style.color = '#999';
+    }
+}
+
+audioTargetFormat.addEventListener('change', () => {
+    updateAudioBitrateRange();
+});
+
+// 码率滑块
+bitrateSlider.addEventListener('input', () => {
+    bitrateValue.textContent = bitrateSlider.value + 'kbps';
 });
 
 // === 输出目录 ===
@@ -415,63 +560,122 @@ convertBtn.addEventListener('click', async () => {
     clearLogs();
     convertBtn.disabled = true;
 
-    const targetFmt = targetFormat.value;
-    const quality = parseInt(qualitySlider.value);
-    const resizeOpts = {};
-    if (resizeWidth.value) resizeOpts.width = parseInt(resizeWidth.value);
-    if (resizeHeight.value) resizeOpts.height = parseInt(resizeHeight.value);
-    const keepAR = keepAspectRatio.checked;
+    const isAudio = appState.convertType === 'audio';
 
-    const options = {
-        targetFormat: targetFmt,
-        quality,
-        resize: (resizeOpts.width || resizeOpts.height) ? resizeOpts : null,
-        keepAspectRatio: keepAR,
-        outputDir: appState.outputDir
-    };
+    if (isAudio) {
+        // === 音频转换 ===
+        const targetFmt = audioTargetFormat.value;
+        const bitrate = bitrateSlider.disabled ? null : bitrateSlider.value + 'k';
 
-    if (appState.isSingleFile || appState.mode === 'single') {
-        addLog('info', `开始转换: ${appState.files[0].name} → ${targetFmt}`);
+        const options = {
+            targetFormat: targetFmt,
+            bitrate,
+            outputDir: appState.outputDir
+        };
 
-        const result = await window.electronAPI.convertSingle({
-            inputPath: appState.files[0].path,
-            ...options
-        });
+        if (appState.isSingleFile || appState.mode === 'single') {
+            addLog('info', `开始转换: ${appState.files[0].name} → ${targetFmt}`);
 
-        if (result.success) {
-            const ratio = result.originalSize > 0
-                ? ((1 - result.outputSize / result.originalSize) * 100).toFixed(1)
-                : 0;
-            addLog('success',
-                `转换成功: ${result.outputName} (${formatFileSize(result.outputSize)}, ` +
-                `${ratio > 0 ? `压缩 ${ratio}%` : ''})`
-            );
+            const result = await window.electronAPI.convertAudioSingle({
+                inputPath: appState.files[0].path,
+                ...options
+            });
+
+            if (result.success) {
+                const ratio = result.originalSize > 0
+                    ? ((1 - result.outputSize / result.originalSize) * 100).toFixed(1)
+                    : 0;
+                addLog('success',
+                    `转换成功: ${result.outputName} (${formatFileSize(result.outputSize)}, ` +
+                    `${ratio > 0 ? `压缩 ${ratio}%` : ''})`
+                );
+            } else {
+                addLog('error', `转换失败: ${result.error}`);
+            }
         } else {
-            addLog('error', `转换失败: ${result.error}`);
+            addLog('info', `开始批量转换 ${appState.files.length} 个音频文件 → ${targetFmt}`);
+            setProgress(0, appState.files.length);
+
+            window.electronAPI.onAudioBatchProgress((data) => {
+                setProgress(data.current, data.total);
+                const r = data.lastResult;
+                if (r.success) {
+                    addLog('success', `[${r.index + 1}/${r.total}] ${r.file} → 转换成功 (${formatFileSize(r.outputSize)})`);
+                } else {
+                    addLog('error', `[${r.index + 1}/${r.total}] ${r.file} → ${r.error}`);
+                }
+            });
+
+            const results = await window.electronAPI.convertAudioBatch({
+                files: appState.files,
+                ...options
+            });
+
+            window.electronAPI.removeAudioBatchProgress();
+
+            const successCount = results.filter(r => r.success).length;
+            addLog('info', `批量转换完成: ${successCount}/${results.length} 个成功`);
         }
     } else {
-        addLog('info', `开始批量转换 ${appState.files.length} 个文件 → ${targetFmt}`);
-        setProgress(0, appState.files.length);
+        // === 图片转换 ===
+        const targetFmt = targetFormat.value;
+        const quality = parseInt(qualitySlider.value);
+        const resizeOpts = {};
+        if (resizeWidth.value) resizeOpts.width = parseInt(resizeWidth.value);
+        if (resizeHeight.value) resizeOpts.height = parseInt(resizeHeight.value);
+        const keepAR = keepAspectRatio.checked;
 
-        window.electronAPI.onBatchProgress((data) => {
-            setProgress(data.current, data.total);
-            const r = data.lastResult;
-            if (r.success) {
-                addLog('success', `[${r.index + 1}/${r.total}] ${r.file} → 转换成功 (${formatFileSize(r.outputSize)})`);
+        const options = {
+            targetFormat: targetFmt,
+            quality,
+            resize: (resizeOpts.width || resizeOpts.height) ? resizeOpts : null,
+            keepAspectRatio: keepAR,
+            outputDir: appState.outputDir
+        };
+
+        if (appState.isSingleFile || appState.mode === 'single') {
+            addLog('info', `开始转换: ${appState.files[0].name} → ${targetFmt}`);
+
+            const result = await window.electronAPI.convertSingle({
+                inputPath: appState.files[0].path,
+                ...options
+            });
+
+            if (result.success) {
+                const ratio = result.originalSize > 0
+                    ? ((1 - result.outputSize / result.originalSize) * 100).toFixed(1)
+                    : 0;
+                addLog('success',
+                    `转换成功: ${result.outputName} (${formatFileSize(result.outputSize)}, ` +
+                    `${ratio > 0 ? `压缩 ${ratio}%` : ''})`
+                );
             } else {
-                addLog('error', `[${r.index + 1}/${r.total}] ${r.file} → ${r.error}`);
+                addLog('error', `转换失败: ${result.error}`);
             }
-        });
+        } else {
+            addLog('info', `开始批量转换 ${appState.files.length} 个文件 → ${targetFmt}`);
+            setProgress(0, appState.files.length);
 
-        const results = await window.electronAPI.convertBatch({
-            files: appState.files,
-            ...options
-        });
+            window.electronAPI.onBatchProgress((data) => {
+                setProgress(data.current, data.total);
+                const r = data.lastResult;
+                if (r.success) {
+                    addLog('success', `[${r.index + 1}/${r.total}] ${r.file} → 转换成功 (${formatFileSize(r.outputSize)})`);
+                } else {
+                    addLog('error', `[${r.index + 1}/${r.total}] ${r.file} → ${r.error}`);
+                }
+            });
 
-        window.electronAPI.removeBatchProgress();
+            const results = await window.electronAPI.convertBatch({
+                files: appState.files,
+                ...options
+            });
 
-        const successCount = results.filter(r => r.success).length;
-        addLog('info', `批量转换完成: ${successCount}/${results.length} 个成功`);
+            window.electronAPI.removeBatchProgress();
+
+            const successCount = results.filter(r => r.success).length;
+            addLog('info', `批量转换完成: ${successCount}/${results.length} 个成功`);
+        }
     }
 
     convertBtn.disabled = false;
@@ -480,3 +684,4 @@ convertBtn.addEventListener('click', async () => {
 // === 初始化 ===
 renderHome();
 targetFormat.dispatchEvent(new Event('change'));
+audioTargetFormat.dispatchEvent(new Event('change'));

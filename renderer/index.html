@@ -74,8 +74,8 @@
                         <div id="file-info" class="file-info" style="display:none"></div>
                     </div>
 
-                    <!-- 转换设置 -->
-                    <div class="section settings-section">
+                    <!-- 转换设置 - 图片 -->
+                    <div id="image-settings" class="section settings-section">
                         <h2 class="section-title">转换设置</h2>
                         <div class="settings-grid">
                             <div class="setting-item">
@@ -113,6 +113,49 @@
                                     保持宽高比
                                 </label>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 转换设置 - 音频 -->
+                    <div id="audio-settings" class="section settings-section" style="display:none">
+                        <h2 class="section-title">转换设置</h2>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label for="audio-target-format">目标格式</label>
+                                <select id="audio-target-format">
+                                    <option value=".mp3" selected>MP3 (.mp3)</option>
+                                    <option value=".wav">WAV (.wav)</option>
+                                    <option value=".flac">FLAC (.flac)</option>
+                                    <option value=".aac">AAC (.aac)</option>
+                                    <option value=".ogg">OGG (.ogg)</option>
+                                    <option value=".m4a">M4A (.m4a)</option>
+                                    <option value=".opus">Opus (.opus)</option>
+                                    <option value=".wma">WMA (.wma)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="bitrate-slider">码率</label>
+                                <div class="quality-control">
+                                    <input type="range" id="bitrate-slider" min="32" max="320" value="192" step="32">
+                                    <span id="bitrate-value">192kbps</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 视频转换占位 -->
+                    <div id="video-placeholder" class="section" style="display:none">
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;">
+                            <div style="font-size:48px;margin-bottom:16px;">🎬</div>
+                            <h2 style="font-size:20px;color:#333;margin-bottom:8px;">视频转换</h2>
+                            <p style="font-size:14px;color:#888;margin-bottom:4px;">该功能正在开发中，敬请期待！</p>
+                            <p style="font-size:13px;color:#aaa;">后续将支持多种视频格式之间的互转</p>
+                        </div>
+                    </div>
+
+                    <!-- 输出目录（通用） -->
+                    <div class="section settings-section">
+                        <div class="settings-grid">
                             <div class="setting-item">
                                 <label>输出目录</label>
                                 <div class="output-control">
